@@ -85,7 +85,7 @@ func PublicMatches(w http.ResponseWriter, r *http.Request) {
 
   for _, match := range matches {
     key := datastore.Key{
-      Kind: "match",
+      Kind: "Match",
       ID:   int64(match.MatchId),
     }
 
