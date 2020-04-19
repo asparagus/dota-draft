@@ -89,7 +89,7 @@ func PublicMatches(w http.ResponseWriter, r *http.Request) {
       ID:   int64(match.MatchId),
     }
 
-    if _, err := client.Put(ctx, &key, match); err != nil {
+    if _, err := client.Put(ctx, &key, &match); err != nil {
       panic(err.Error())
     }
   }
