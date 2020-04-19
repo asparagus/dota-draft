@@ -88,7 +88,10 @@ func PublicMatches(w http.ResponseWriter, r *http.Request) {
       Kind: "match",
       ID: match.MatchId
     }
-    client.Put(ctx, key, match)
+
+    if _, err := client.Put(ctx, key, match); err != nil {
+      panic(err.Error())
+    }
   }
 
   output := []byte(fmt.Sprintf(`{"num_matches": %d}`, len(matches)))
