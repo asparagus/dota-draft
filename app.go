@@ -8,11 +8,12 @@ import (
   "fmt"
   "io/ioutil"
   "net/http"
+  "os"
   "strings"
 )
 
 const Project = "dota-draft"
-const PublicMatchesURL = "https://api.opendota.com/api/publicMatches?mmr_descending=true"
+const PublicMatchesURL = "https://api.opendota.com/api/publicMatches"
 
 type Match struct {
   // General
@@ -57,6 +58,7 @@ func (m *Match) UnmarshalJSON(data []byte) error {
 
 var ctx context.Context
 var client *datastore.Client
+var url string
 
 // Init runs during package initialization.
 func init() {
@@ -66,10 +68,15 @@ func init() {
   if err != nil {
     panic(fmt.Sprintf("Error initializing datastore client: %v", err))
   }
+
+  url = fmt.Sprintf("%s?mmr_descending=%s&api_key=%s",
+    PublicMatchesURL,
+    "true",
+    os.Getenv("DOTA_API_KEY"))
 }
 
 func PublicMatches(w http.ResponseWriter, r *http.Request) {
-  resp, err := http.Get(PublicMatchesURL)
+  resp, err := http.Get(url)
 
   if err != nil {
     panic(err.Error())
