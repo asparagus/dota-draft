@@ -2,8 +2,8 @@
 package p
 
 import (
-  // "cloud.google.com/go/datastore"
-  // "context"
+  "cloud.google.com/go/datastore"
+  "context"
   "encoding/json"
   "fmt"
   "io/ioutil"
@@ -55,6 +55,19 @@ func (m *Match) UnmarshalJSON(data []byte) error {
   return nil
 }
 
+var ctx context.Context
+var client datastore.Client
+
+// Init runs during package initialization.
+func init() {
+  var err error
+  ctx = context.Background()
+  client, err = datastore.NewClient(ctx, Project)
+  if err != nil {
+    panic(fmt.Sprintf("Error initializing datastore client: %v", err))
+  }
+}
+
 func PublicMatches(w http.ResponseWriter, r *http.Request) {
   resp, err := http.Get(PublicMatchesURL)
 
@@ -70,8 +83,15 @@ func PublicMatches(w http.ResponseWriter, r *http.Request) {
   var matches []Match
   json.Unmarshal(body, &matches)
 
-  output := []byte(fmt.Sprintf(`{"num_matches": %d}`, len(matches)))
+  for _, match := range matches {
+    key := Key {
+      Kind: "match",
+      ID: match.MatchId
+    }
+    client.Put(ctx, key, match)
+  }
 
+  output := []byte(fmt.Sprintf(`{"num_matches": %d}`, len(matches)))
   w.Header().Set("Content-Type", "application/json")
   w.Write(output)
 }
