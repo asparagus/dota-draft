@@ -84,9 +84,9 @@ func PublicMatches(w http.ResponseWriter, r *http.Request) {
   json.Unmarshal(body, &matches)
 
   for _, match := range matches {
-    key := Key {
+    key := Key{
       Kind: "match",
-      ID: match.MatchId
+      ID:   match.MatchId,
     }
 
     if _, err := client.Put(ctx, key, match); err != nil {
