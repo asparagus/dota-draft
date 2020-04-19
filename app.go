@@ -56,7 +56,7 @@ func (m *Match) UnmarshalJSON(data []byte) error {
 }
 
 var ctx context.Context
-var client datastore.Client
+var client *datastore.Client
 
 // Init runs during package initialization.
 func init() {
@@ -84,7 +84,7 @@ func PublicMatches(w http.ResponseWriter, r *http.Request) {
   json.Unmarshal(body, &matches)
 
   for _, match := range matches {
-    key := Key{
+    key := datastore.Key{
       Kind: "match",
       ID:   match.MatchId,
     }
