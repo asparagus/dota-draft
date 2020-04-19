@@ -12,7 +12,7 @@ import (
 )
 
 const Project = "dota-draft"
-const PublicMatchesURL = "https://api.opendota.com/api/publicMatches"
+const PublicMatchesURL = "https://api.opendota.com/api/publicMatches?mmr_descending=true"
 
 type Match struct {
   // General
