@@ -86,10 +86,10 @@ func PublicMatches(w http.ResponseWriter, r *http.Request) {
   for _, match := range matches {
     key := datastore.Key{
       Kind: "match",
-      ID:   match.MatchId,
+      ID:   int64(match.MatchId),
     }
 
-    if _, err := client.Put(ctx, key, match); err != nil {
+    if _, err := client.Put(ctx, &key, match); err != nil {
       panic(err.Error())
     }
   }
