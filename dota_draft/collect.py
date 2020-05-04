@@ -26,11 +26,13 @@ def run(argv=None):
     parser.add_argument(
         '--bucket',
         dest='bucket',
+        required=True,
         help='Bucket to store the results.'
     )
     parser.add_argument(
         '--file',
         dest='file',
+        required=True,
         help='File name to store the results.'
     )
 

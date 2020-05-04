@@ -85,10 +85,12 @@ def run(argv=None, save_main_session=True):
     parser.add_argument(
         '--input',
         dest='input',
+        required=True,
         help='Input file to process.')
     parser.add_argument(
         '--output',
         dest='output',
+        required=True,
         help='Output file to write results to.')
     known_args, pipeline_args = parser.parse_known_args(argv)
     pipeline_args.extend([
@@ -110,10 +112,10 @@ def run(argv=None, save_main_session=True):
             | 'Strip data' >> beam.ParDo(Strip)
             | 'Filter data' >> beam.ParDo(Filter)
             | 'Write' >> WriteToText(known_args.output))
-        
-        return pipeline.run()
 
+        result = pipeline.run()
+        result.wait_until_finish()
 
 if __name__ == '__main__':
-  logging.getLogger().setLevel(logging.INFO)
-  run()
+    logging.getLogger().setLevel(logging.INFO)
+    run()
