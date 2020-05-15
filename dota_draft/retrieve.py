@@ -1,6 +1,6 @@
 """Process match ids and retrieve the actual match data.
 
-Performs API calls to retrieve the matches, strips unnecessary data and 
+Performs API calls to retrieve the matches, strips unnecessary data and
 filters out some matches.
 
 Usage:
@@ -12,16 +12,20 @@ import argparse
 import json
 import logging
 
-from dota_draft import api
-
 import apache_beam as beam
 from apache_beam.io import ReadFromText
 from apache_beam.io import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 
+from . import api
 
+
+LOBBY_TYPE_PRACTICE = 1
 LOBBY_TYPE_RANKED = 7
+LOBBY_TYPE_TOURNAMENT = 2
+
+GAME_MODE_CAPTAINS_MODE = 2
 GAME_MODE_RANKED_ALL_PICK = 22
 
 
@@ -32,35 +36,49 @@ class Retrieve(beam.DoFn):
         self.api = api.Api()
 
     def process(self, match_id):
-        return self.api.matches(match_id)
+        yield json.dumps(self.api.matches(match_id))
 
 
 class Strip(beam.DoFn):
     """Strip unnecessary data."""
 
-    def process(self, match):
-        keep_cols = ('match_id', 'lobby_type', 'game_mode',
-                     'duration', 'radiant_win')
-        summary = {
-            k: match[k]
-            for k in keep_cols
-        }
+    def process(self, match_data):
+        try:
+            match = json.loads(match_data)
+            keep_cols = ('match_id', 'lobby_type', 'game_mode',
+                        'duration', 'radiant_win')
+            summary = {
+                k: match.get(k)
+                for k in keep_cols
+            }
 
-        summary['radiant_picks'] = [
-            pick_ban['hero_id']
-            for pick_ban in match['picks_bans']
-            if pick_ban['is_pick'] and pick_ban['team'] == 0]
-        summary['dire_picks'] = [
-            pick_ban['hero_id']
-            for pick_ban in match['picks_bans']
-            if pick_ban['is_pick'] and pick_ban['team'] == 1]
+            picks_bans = match.get('picks_bans')
+            if not picks_bans:
+                logging.warning('Missing picks_bans')
+                return
 
-        summary['player_rank_tiers'] = [
-            player['rank_tier']
-            for player in match['players']
-        ]
+            summary['radiant_picks'] = [
+                pb['hero_id']
+                for pb in picks_bans
+                if pb['is_pick'] and pb['team'] == 0]
+            summary['dire_picks'] = [
+                pb['hero_id']
+                for pb in picks_bans
+                if pb['is_pick'] and pb['team'] == 1]
 
-        return summary
+            players = match.get('players')
+            if not players:
+                logging.warning('Missing players')
+                return
+
+            summary['player_rank_tiers'] = [
+                player['rank_tier']
+                for player in players
+            ]
+
+            yield json.dumps(summary)
+        except Exception as e:
+            logging.warning(e)
 
 
 class Filter(beam.DoFn):
@@ -70,12 +88,19 @@ class Filter(beam.DoFn):
         return all((rank_tier is None or int(rank_tier) >= 60)
                    for rank_tier in player_rank_tiers)
 
-    def process(self, match):
-        if (match['lobby_type'] == LOBBY_TYPE_RANKED and
-            match['game_mode'] == GAME_MODE_RANKED_ALL_PICK and
-            match['duration'] > 600):
-            if self.filter_rank(match['player_rank_tiers']):
-                yield json.dumps(match)
+    def process(self, match_data):
+        try:
+            match = json.loads(match_data)
+            if (match['lobby_type'] in [LOBBY_TYPE_PRACTICE,
+                                        LOBBY_TYPE_RANKED,
+                                        LOBBY_TYPE_TOURNAMENT] and
+                match['game_mode'] in [GAME_MODE_CAPTAINS_MODE,
+                                    GAME_MODE_RANKED_ALL_PICK] and
+                match['duration'] > 600):
+                if self.filter_rank(match['player_rank_tiers']):
+                    yield match_data
+        except Exception as e:
+            logging.warning(e)
 
 
 def run(argv=None, save_main_session=True):
@@ -94,7 +119,7 @@ def run(argv=None, save_main_session=True):
         help='Output file to write results to.')
     known_args, pipeline_args = parser.parse_known_args(argv)
     pipeline_args.extend([
-        '--runner=DirectRunner',
+        '--runner=DataflowRunner',
         '--project=dota-draft',
         '--staging_location=gs://dota-draft/staging',
         '--temp_location=gs://dota-draft/tmp',
@@ -108,9 +133,9 @@ def run(argv=None, save_main_session=True):
     with beam.Pipeline(options=pipeline_options) as pipeline:
         (pipeline
             | 'Read match IDs' >> ReadFromText(known_args.input)
-            | 'Retrieve matches' >> beam.ParDo(Retrieve)
-            | 'Strip data' >> beam.ParDo(Strip)
-            | 'Filter data' >> beam.ParDo(Filter)
+            | 'Retrieve matches' >> beam.ParDo(Retrieve())
+            | 'Strip data' >> beam.ParDo(Strip())
+            | 'Filter data' >> beam.ParDo(Filter())
             | 'Write' >> WriteToText(known_args.output))
 
         result = pipeline.run()

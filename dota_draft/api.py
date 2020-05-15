@@ -14,7 +14,7 @@ class Api(object):
         if api_key is None:
             api_key = os.getenv('DOTA_API_KEY')
         self.api_key = api_key
-    
+
     def _request(self, url, *args, **kwargs):
         params = kwargs.copy()
         params['api_key'] = self.api_key

@@ -10,8 +10,9 @@ Usage:
 import argparse
 import logging
 
-from dota_draft import api
 from google.cloud import storage
+
+from . import api
 
 
 def run(argv=None):
