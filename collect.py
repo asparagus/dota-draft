@@ -12,7 +12,7 @@ import logging
 
 from google.cloud import storage
 
-from . import api
+from dota_draft import api
 
 
 def run(argv=None):

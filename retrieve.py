@@ -18,7 +18,7 @@ from apache_beam.io import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 
-from . import api
+from dota_draft import api
 
 
 LOBBY_TYPE_PRACTICE = 1
@@ -142,5 +142,6 @@ def run(argv=None, save_main_session=True):
         result.wait_until_finish()
 
 if __name__ == '__main__':
-    logging.getLogger().setLevel(logging.INFO)
-    run()
+    print('!')
+    # logging.getLogger().setLevel(logging.INFO)
+    # run()

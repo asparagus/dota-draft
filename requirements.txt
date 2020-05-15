@@ -1,3 +1,0 @@
-apache-beam==2.20.0
-google-cloud-storage==1.28.0
-requests==2.23.0
