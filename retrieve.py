@@ -18,7 +18,7 @@ from apache_beam.io import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 
-from dota_draft import api
+from src import api
 
 
 LOBBY_TYPE_PRACTICE = 1
@@ -36,7 +36,7 @@ class Retrieve(beam.DoFn):
         self.api = api.Api()
 
     def process(self, match_id):
-        yield json.dumps(self.api.matches(match_id))
+        yield json.dumps(self.api.match(match_id))
 
 
 class Strip(beam.DoFn):
@@ -138,10 +138,7 @@ def run(argv=None, save_main_session=True):
             | 'Filter data' >> beam.ParDo(Filter())
             | 'Write' >> WriteToText(known_args.output))
 
-        result = pipeline.run()
-        result.wait_until_finish()
 
 if __name__ == '__main__':
-    print('!')
-    # logging.getLogger().setLevel(logging.INFO)
-    # run()
+    logging.getLogger().setLevel(logging.INFO)
+    run()
