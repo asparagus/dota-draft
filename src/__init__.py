@@ -1,0 +1,1 @@
+from src.collect import run as collect
