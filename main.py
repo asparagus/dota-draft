@@ -1,5 +1,5 @@
 from src import collect as coll
 
 
-def collect(event, context):
+def collect(request):
     coll.run()
