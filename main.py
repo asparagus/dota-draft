@@ -17,7 +17,7 @@ gcloud functions deploy collect \
 
 Check additional documentation at https://cloud.google.com/sdk/gcloud/reference/functions/deploy.
 """
-from src import collect as coll
+from draft import collect as coll
 
 
 def collect(request):

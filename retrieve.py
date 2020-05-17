@@ -5,7 +5,7 @@ filters out some matches.
 
 Usage:
     set GOOGLE_APPLICATION_CREDENTIALS=<PATH>
-    python -m dota_draft.retrieve --input=<INPUT_FILE> --output=<OUTPUT_FILE> --dota_api_key=<DOTA_API_KEY>
+    python -m draft.retrieve --input=<INPUT_FILE> --output=<OUTPUT_FILE>
 """
 import argparse
 import json
@@ -17,7 +17,7 @@ from apache_beam.io import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 
-from src import api
+from draft import api
 
 
 LOBBY_TYPE_PRACTICE = 1
@@ -103,7 +103,7 @@ class Filter(beam.DoFn):
 
 
 def run(argv=None, save_main_session=True):
-    """Main entry point; defines and runs the wordcount pipeline."""
+    """Main entry point; defines and runs the retrieve pipeline."""
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

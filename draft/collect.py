@@ -5,7 +5,7 @@ This script scrapes the parsedMatches api to collect ids.
 Usage:
     set DOTA_API_KEY=<KEY>
     set GOOGLE_APPLICATION_CREDENTIALS=<PATH>
-    python3 -m src.collect --num_matches=<NUM> --bucket=<BUCKET> --file=data/ids/<FILENAME>
+    python3 -m draft.collect --num_matches=<NUM> --bucket=<BUCKET> --file=data/ids/<FILENAME>
 """
 import argparse
 import datetime
@@ -15,8 +15,8 @@ import math
 
 from google.cloud import storage
 
-from src import api
-from src import data
+from draft import api
+from draft import data
 
 
 def run(argv=None):
