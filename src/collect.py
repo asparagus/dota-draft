@@ -90,7 +90,7 @@ def run(argv=None):
         num_files += 1
         num_retrieved += len(batch)
         last_retrieved = max(last_retrieved, batch[0])
-    
+
     result = {
         'last_run': datetime.datetime.today().strftime(r'%Y-%m-%d'),
         'num_retrieved': num_retrieved,

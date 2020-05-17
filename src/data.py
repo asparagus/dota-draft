@@ -35,7 +35,7 @@ def new_match_ids(most_recent_retrieved=None, max_matches=None, batch_size=1000)
 
         num_retrieved += len(retrieved_ids)
         logging.info('Received %i new ids' % len(retrieved_ids))
-    
+
     if buffer:
         yield buffer
 

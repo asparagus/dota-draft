@@ -11,14 +11,14 @@ from urllib import parse
 
 
 class Api(object):
-    
+
     API_URL = 'https://api.opendota.com/api/'
     MATCHES_URL = parse.urljoin(API_URL, 'matches/%s')
     PARSED_MATCHES_URL = parse.urljoin(API_URL, 'parsedMatches')
 
     def __init__(self, api_key=None):
         """Initialize the Api object with a given api_key.
-        
+
         Args:
             api_key: The key to the opendota api. If omitted, the DOTA_API_KEY
                 environment variable will be used.
@@ -29,7 +29,7 @@ class Api(object):
 
     def _request(self, url, *args, **kwargs):
         """Internal request function.
-        
+
         Args:
             url: The url to request data from
             *args: Arguments to encode into the request
@@ -44,7 +44,7 @@ class Api(object):
 
     def parsed_matches(self, less_than_match_id=None):
         """Retrieve parsed match ids.
-        
+
         Args:
             less_than_match_id: (optional) Id to pass to the API call.
                 Retrieved match ids will be prior to this id.
