@@ -4,9 +4,8 @@ Performs API calls to retrieve the matches, strips unnecessary data and
 filters out some matches.
 
 Usage:
-    set DOTA_API_KEY=<KEY>
     set GOOGLE_APPLICATION_CREDENTIALS=<PATH>
-    python -m dota_draft.retrieve --input=<INPUT_FILE> --output=<OUTPUT_FILE>
+    python -m dota_draft.retrieve --input=<INPUT_FILE> --output=<OUTPUT_FILE> --dota_api_key=<DOTA_API_KEY>
 """
 import argparse
 import json
@@ -32,8 +31,8 @@ GAME_MODE_RANKED_ALL_PICK = 22
 class Retrieve(beam.DoFn):
     """Retrieve stuff."""
 
-    def __init__(self):
-        self.api = api.Api()
+    def __init__(self, api_key):
+        self.api = api.Api(api_key)
 
     def process(self, match_id):
         yield json.dumps(self.api.match(match_id))
@@ -46,7 +45,7 @@ class Strip(beam.DoFn):
         try:
             match = json.loads(match_data)
             keep_cols = ('match_id', 'lobby_type', 'game_mode',
-                        'duration', 'radiant_win')
+                         'duration', 'radiant_win')
             summary = {
                 k: match.get(k)
                 for k in keep_cols
@@ -117,6 +116,10 @@ def run(argv=None, save_main_session=True):
         dest='output',
         required=True,
         help='Output file to write results to.')
+    parser.add_argument(
+        '--dota_api_key',
+        dest='dota_api_key',
+        help='Api key to OpenDota.')
     known_args, pipeline_args = parser.parse_known_args(argv)
     pipeline_args.extend([
         '--runner=DataflowRunner',
@@ -133,7 +136,7 @@ def run(argv=None, save_main_session=True):
     with beam.Pipeline(options=pipeline_options) as pipeline:
         (pipeline
             | 'Read match IDs' >> ReadFromText(known_args.input)
-            | 'Retrieve matches' >> beam.ParDo(Retrieve())
+            | 'Retrieve matches' >> beam.ParDo(Retrieve(known_args.dota_api_key))
             | 'Strip data' >> beam.ParDo(Strip())
             | 'Filter data' >> beam.ParDo(Filter())
             | 'Write' >> WriteToText(known_args.output))
