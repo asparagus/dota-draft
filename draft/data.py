@@ -13,8 +13,8 @@ def new_match_ids(most_recent_retrieved=None, max_matches=None, batch_size=1000)
     num_retrieved = 0
 
     last_retrieved_id = None
-    while True:
-        parsed_matches = api_client.parsed_matches(last_retrieved_id)
+    parsed_matches = api_client.parsed_matches(last_retrieved_id)  # First batch
+    while parsed_matches:
         retrieved_ids = [m['match_id'] for m in parsed_matches]
 
         # Collect only new matches
@@ -35,6 +35,9 @@ def new_match_ids(most_recent_retrieved=None, max_matches=None, batch_size=1000)
 
         num_retrieved += len(retrieved_ids)
         logging.info('Received %i new ids' % len(retrieved_ids))
+
+        # Collect next batch
+        parsed_matches = api_client.parsed_matches(last_retrieved_id)
 
     if buffer:
         yield buffer
