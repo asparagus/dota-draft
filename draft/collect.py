@@ -38,7 +38,7 @@ def run(argv=None):
     parser.add_argument(
         '--bucket',
         dest='bucket',
-        default='dota-draft',
+        default='dota-drafter-matches',
         help='Bucket to store the results.'
     )
     parser.add_argument(

@@ -16,7 +16,7 @@ setuptools.setup(
     description='Dota draft package',
     author='Ariel Perez',
     author_email='arielperezch@gmail.com',
-    url='https://github.com/Ariel-Perez/dota-draft',
+    url='https://github.com/asparagus/dota-draft',
     install_requires=requirements,
     packages=['draft'],  # Omit test package
 )

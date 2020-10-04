@@ -13,7 +13,8 @@ gcloud functions deploy collect \
     --project=dota-draft \
     --source=. \
     --ingress-settings=internal-only \
-    --set-env-vars=<DOTA_API_KEY>
+    --set-env-vars=<DOTA_API_KEY> \
+    --setup_file=setup.py
 
 Check additional documentation at https://cloud.google.com/sdk/gcloud/reference/functions/deploy.
 """
