@@ -64,21 +64,20 @@ def run(argv=None):
     storage_client = storage.Client()
     bucket = storage_client.bucket(args.bucket)
 
-    most_recent_retrieved = None
+    last_retrieved = None
     try:
         cache_blob = bucket.blob(args.cache)
         cache_data = cache_blob.download_as_string()
         logging.info('Cache retrieved: %s' % cache_data.decode('utf8'))
 
         cache = json.loads(cache_data)
-        most_recent_retrieved = cache['last_retrieved']
+        last_retrieved = cache['last_retrieved']
     except:
         logging.warning('Cache could not be retrieved')
 
-    last_retrieved = most_recent_retrieved
     num_files = 0
     num_retrieved = 0
-    for batch in data.new_match_ids(most_recent_retrieved=most_recent_retrieved,
+    for batch in data.new_match_ids(most_recent_retrieved=last_retrieved,
                                     max_matches=args.num_matches,
                                     batch_size=args.batch_size):
         filename = args.file + '-' + str(num_files).zfill(max_num_digits)
@@ -89,7 +88,7 @@ def run(argv=None):
 
         num_files += 1
         num_retrieved += len(batch)
-        last_retrieved = max(last_retrieved, batch[0])
+        last_retrieved = max(last_retrieved or 0, batch[0])
 
     result = {
         'last_run': datetime.datetime.today().strftime(r'%Y-%m-%d'),
