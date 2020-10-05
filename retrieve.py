@@ -123,9 +123,9 @@ def run(argv=None, save_main_session=True):
     known_args, pipeline_args = parser.parse_known_args(argv)
     pipeline_args.extend([
         '--runner=DataflowRunner',
-        '--project=dota-draft',
-        '--staging_location=gs://dota-draft/staging',
-        '--temp_location=gs://dota-draft/tmp',
+        '--project=dota-drafter-291422',
+        '--staging_location=gs://dota-drafter-291422/staging',
+        '--temp_location=gs://dota-drafter-291422/tmp',
         '--job_name=retrieve-matches',
     ])
 
