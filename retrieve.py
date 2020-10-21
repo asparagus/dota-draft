@@ -120,13 +120,18 @@ def run(argv=None, save_main_session=True):
         '--dota_api_key',
         dest='dota_api_key',
         help='Api key to OpenDota.')
+    parser.add_argument(
+        '--job_name',
+        dest='job_name',
+        help='Name of the dataflow job',
+        default='retrieve-matches')
     known_args, pipeline_args = parser.parse_known_args(argv)
     pipeline_args.extend([
         '--runner=DataflowRunner',
         '--project=dota-drafter-291422',
         '--staging_location=gs://dota-drafter-291422/staging',
         '--temp_location=gs://dota-drafter-291422/tmp',
-        '--job_name=retrieve-matches',
+        # '--job_name=retrieve-matches',
     ])
 
     # We use the save_main_session option because one or more DoFn's in this
