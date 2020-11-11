@@ -1,5 +1,3 @@
-# Author: Robert Guthrie
-
 import argparse
 import glob
 import json
