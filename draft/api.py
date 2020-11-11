@@ -13,8 +13,10 @@ from urllib import parse
 class Api(object):
 
     API_URL = 'https://api.opendota.com/api/'
+    HEROES_URL = parse.urljoin(API_URL, 'heroes')
     MATCHES_URL = parse.urljoin(API_URL, 'matches/%s')
     PARSED_MATCHES_URL = parse.urljoin(API_URL, 'parsedMatches')
+    PUBLIC_MATCHES_URL = parse.urljoin(API_URL, 'publicMatches')
 
     def __init__(self, api_key=None):
         """Initialize the Api object with a given api_key.
@@ -42,6 +44,10 @@ class Api(object):
         response = requests.get(url, params)
         return json.loads(response.text)
 
+    def heroes(self):
+        """Retrieve heroes information."""
+        return self._request(Api.HEROES_URL)
+
     def parsed_matches(self, less_than_match_id=None):
         """Retrieve parsed match ids.
 
@@ -53,6 +59,18 @@ class Api(object):
         """
         return self._request(
             Api.PARSED_MATCHES_URL, less_than_match_id=less_than_match_id)
+    
+    def public_matches(self, less_than_match_id=None):
+        """Retrieve public matches.
+
+        Args:
+            less_than_match_id: (optional) Id to pass to the API call.
+                Retrieved matches will be prior to this id.
+        Returns:
+            Array of matches.
+        """
+        return self._request(
+            Api.PUBLIC_MATCHES_URL, less_than_match_id=less_than_match_id)
 
     def match(self, match_id):
         """Retrieve a match.

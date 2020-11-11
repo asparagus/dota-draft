@@ -1,105 +1,36 @@
-"""Collect ids for training data.
-
-This script scrapes the parsedMatches api to collect ids.
-
-Usage:
-    set DOTA_API_KEY=<KEY>
-    set GOOGLE_APPLICATION_CREDENTIALS=<PATH>
-    python3 -m draft.collect --num_matches=<NUM> --bucket=<BUCKET> --file=data/ids/<FILENAME>
-"""
-import argparse
-import datetime
 import json
-import logging
-import math
-
-from google.cloud import storage
-
 from draft import api
-from draft import data
 
 
-def run(argv=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--num_matches',
-        dest='num_matches',
-        default=10000,
-        type=int,
-        help='Number of match IDs to collect.'
-    )
-    parser.add_argument(
-        '--batch_size',
-        dest='batch_size',
-        default=1000,
-        type=int,
-        help='Number of match IDs to save to each file.'
-    )
-    parser.add_argument(
-        '--bucket',
-        dest='bucket',
-        default='dota-drafter-matches',
-        help='Bucket to store the results.'
-    )
-    parser.add_argument(
-        '--file-pattern',
-        dest='file',
-        default=datetime.datetime.today().strftime(r'data/ids/%Y-%m-%d.csv'),
-        help='File name to store the results. Defaults to data/ids/YYYY-mm-dd.csv'
-    )
-    parser.add_argument(
-        '--cache',
-        dest='cache',
-        default='data/ids/cache.json',
-        help='File to keep track of the last run.'
-    )
+def collect(api, number_matches, last_match_id=None):
+    matches = []
+    while len(matches) < number_matches:
+        new_matches = api.public_matches(last_match_id)
+        if not new_matches:
+            break
+        last_match_id = new_matches[-1]['match_id']
+        matches.extend(new_matches)
+        print(len(matches))
+    return matches
 
-    args = parser.parse_args(argv)
-    if args.num_matches <= 0:
-        return
 
-    max_batches = math.ceil(args.num_matches / args.batch_size)
-    max_num_digits = math.ceil(math.log10(max_batches))
+def filter(matches, min_rank):
+    return [match for match in matches if match['avg_rank_tier'] >= min_rank]
 
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(args.bucket)
 
-    last_retrieved = None
-    try:
-        cache_blob = bucket.blob(args.cache)
-        cache_data = cache_blob.download_as_string()
-        logging.info('Cache retrieved: %s' % cache_data.decode('utf8'))
+def save(matches, file):
+    with open(file, 'w') as f:
+        for match in matches:
+            f.write(json.dumps(match) + '\n')
 
-        cache = json.loads(cache_data)
-        last_retrieved = cache['last_retrieved']
-    except:
-        logging.warning('Cache could not be retrieved')
 
-    num_files = 0
-    num_retrieved = 0
-    for batch in data.new_match_ids(most_recent_retrieved=last_retrieved,
-                                    max_matches=args.num_matches,
-                                    batch_size=args.batch_size):
-        filename = args.file + '-' + str(num_files).zfill(max_num_digits)
-        blob = bucket.blob(filename)
-
-        blob.upload_from_string('\n'.join([str(i) for i in batch]))
-        logging.info('Uploaded %i ids to %s' %  (len(batch), filename))
-
-        num_files += 1
-        num_retrieved += len(batch)
-        last_retrieved = max(last_retrieved or 0, batch[0])
-
-    result = {
-        'last_run': datetime.datetime.today().strftime(r'%Y-%m-%d'),
-        'num_retrieved': num_retrieved,
-        'last_retrieved': last_retrieved
-    }
-
-    cache_blob = bucket.blob(args.cache)
-    cache_blob.upload_from_string(json.dumps(result))
+def run():
+    a = api.Api('45b32bd3-0386-4ee7-ac48-da17ff557d3f')
+    matches = collect(a, 1e6)
+    save(matches, 'new-data.json')
+    ancient_matches = filter(matches, 60)
+    save(ancient_matches, 'new-data-ancient.json')
 
 
 if __name__ == '__main__':
-    logging.getLogger().setLevel(logging.INFO)
     run()

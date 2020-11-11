@@ -10,7 +10,7 @@ gcloud functions deploy collect \
     --entry-point=collect \
     --runtime=python37 \
     --trigger-http \
-    --project=dota-draft \
+    --project=<PROJECT_NAME> \
     --source=. \
     --ingress-settings=internal-only \
     --set-env-vars=<DOTA_API_KEY> \

@@ -5,5 +5,12 @@
 __pycache__
 *.pyc
 
+# Data
+*.json
+*.tfrecords
+
+# Trained models
+*.pt
+
 # Credentials
 dota-draft-*.json
