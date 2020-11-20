@@ -1,6 +1,5 @@
 import argparse
 import glob
-import json
 import os
 import pytorch_lightning as pl
 from pytorch_lightning import callbacks
@@ -11,25 +10,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils import data
 
-
-def DatasetFromFile(file):
-    def parse_team(team_str):
-        return [int(i) for i in team_str.split(',')]
-
-    def parse_line(line):
-        match = json.loads(line)
-        return (parse_team(match['radiant_team'])
-                if match['radiant_win']
-                else parse_team(match['dire_team']))
-
-    with open(file, 'r') as f:
-        matches = [parse_line(line)
-                   for line in f.read().split('\n')
-                   if line]
-        matches = torch.tensor(
-            [heroes for heroes in matches if len(heroes) == 5],
-            dtype=torch.long)
-        return data.TensorDataset(matches)
+from draft.train import data_ingestion
 
 
 class CBOW(pl.LightningModule):
@@ -103,18 +84,9 @@ if __name__ == '__main__':
             if os.path.samefile(train_files[i], val_f):
                 train_files.pop(i)
 
-    training_dataset = data.ConcatDataset([
-        DatasetFromFile(f)
-        for f in train_files
-    ])
-    val_dataset = data.ConcatDataset([
-        DatasetFromFile(f)
-        for f in val_files
-    ])
-    training_loader = data.DataLoader(
-        training_dataset, batch_size=args.batch_size, pin_memory=True, num_workers=4)
-    val_loader = data.DataLoader(
-        val_dataset, batch_size=args.batch_size, pin_memory=True, num_workers=4)
+    ingester = data_ingestion.WinningTeamIngester(batch_size=args.batch_size, num_workers=4)
+    training_loader = ingester.DataLoader(train_files)
+    val_loader = ingester.DataLoader(val_files)
 
     model = CBOW(130, args.embedding_dim)
 
