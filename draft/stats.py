@@ -86,7 +86,11 @@ class Stats:
         return self.hero_wins.get(hero_id, 0) / self.hero_picks.get(hero_id, 1)
 
     def Synergy(self, hero_1: int, hero_2: int):
-        """Get the joint win rate of two heroes."""
+        """Get the joint win rate of two heroes.
+
+        If given repeated ids, will just return the win rate."""
+        if hero_1 == hero_2:
+            return self.WinRate(hero_1)
         sorted_ids = tuple(sorted([hero_1, hero_2]))
         if sorted_ids not in self.hero_pair_picks:
             raise IndexError('Pair not found in existing data: %s' % str(sorted_ids))
