@@ -103,7 +103,7 @@ class MatchDataset(geodata.InMemoryDataset):
         dire_heroes = [
             int(h) for h in match['dire_team'].split(',')
         ]
-        onehot = np.zeros(10, 130)
+        onehot = np.zeros([10, 130])
         for i, h in enumerate(radiant_heroes):
             onehot[i][h] = 1
         for i, h in enumerate(dire_heroes):
