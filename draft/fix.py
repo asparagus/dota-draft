@@ -13,14 +13,13 @@ from google.cloud import storage
 
 def run(argv=None):
     result = {
-        'last_run': '2020-05-14',
-        'num_retrieved': 19074,
-        'last_retrieved': 5414171556
+        'earliest': 6454017406,
+        'latest': 6466296506
     }
 
     storage_client = storage.Client()
     bucket = storage_client.bucket('dota-draft')
-    cache_blob = bucket.blob('data/ids/cache.json')
+    cache_blob = bucket.blob('data/matches/cache.json')
     cache_blob.upload_from_string(json.dumps(result))
 
 

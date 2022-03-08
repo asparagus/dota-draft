@@ -1,6 +1,5 @@
 import os
 
-from .context import draft
 from draft import api
 
 

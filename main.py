@@ -22,4 +22,4 @@ from draft import collect as coll
 
 
 def collect(request):
-    coll.run()
+    coll.run(start_id=None, bucket_name='dota-draft', storage_path='data/matches')

@@ -7,7 +7,12 @@ import json
 import logging
 import os
 import requests
+from typing import Any, Dict, List
 from urllib import parse
+
+
+MatchData = Dict[str, Any]
+MatchesData = List[MatchData]
 
 
 class Api(object):
