@@ -13,9 +13,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils import data
 
-from draft import api
+from draft.data import api
 from draft import stats
-from draft.train import data_ingestion
+from draft.training import data_ingestion
 
 
 class HeroOneHotEncoding(nn.Module):

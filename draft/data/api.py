@@ -7,23 +7,25 @@ import json
 import logging
 import os
 import requests
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from urllib import parse
 
 
+MatchID = 'match_id'
 MatchData = Dict[str, Any]
 MatchesData = List[MatchData]
 
 
 class Api(object):
 
+    API_KEY = 'api_key'
     API_URL = 'https://api.opendota.com/api/'
     HEROES_URL = parse.urljoin(API_URL, 'heroes')
     MATCHES_URL = parse.urljoin(API_URL, 'matches/%s')
     PARSED_MATCHES_URL = parse.urljoin(API_URL, 'parsedMatches')
     PUBLIC_MATCHES_URL = parse.urljoin(API_URL, 'publicMatches')
 
-    def __init__(self, api_key=None):
+    def __init__(self, api_key: Optional[str] = None):
         """Initialize the Api object with a given api_key.
 
         Args:
@@ -34,7 +36,7 @@ class Api(object):
         if self.api_key is None:
             logging.warning('DOTA_API_KEY not set')
 
-    def _request(self, url, *args, **kwargs):
+    def _request(self, url, *args, **kwargs) -> Dict:
         """Internal request function.
 
         Args:
@@ -45,7 +47,7 @@ class Api(object):
             The parsed JSON.
         """
         params = kwargs.copy()
-        params['api_key'] = self.api_key
+        params[Api.API_KEY] = self.api_key
         response = requests.get(url, params)
         return json.loads(response.text)
 
@@ -53,7 +55,7 @@ class Api(object):
         """Retrieve heroes information."""
         return self._request(Api.HEROES_URL)
 
-    def parsed_matches(self, less_than_match_id=None):
+    def parsed_matches(self, less_than_match_id: Optional[int] = None) -> MatchesData:
         """Retrieve parsed match ids.
 
         Args:
@@ -65,7 +67,7 @@ class Api(object):
         return self._request(
             Api.PARSED_MATCHES_URL, less_than_match_id=less_than_match_id)
     
-    def public_matches(self, less_than_match_id=None):
+    def public_matches(self, less_than_match_id: Optional[int] = None) -> MatchesData:
         """Retrieve public matches.
 
         Args:
@@ -77,7 +79,7 @@ class Api(object):
         return self._request(
             Api.PUBLIC_MATCHES_URL, less_than_match_id=less_than_match_id)
 
-    def match(self, match_id):
+    def match(self, match_id: int) -> MatchData:
         """Retrieve a match.
 
         Args:

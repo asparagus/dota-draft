@@ -1,27 +1,12 @@
+"""Cloud Function scheduled to retrieve new data from the API.""" 
 import argparse
-import json
-import logging
-import os
 
 from typing import Callable, Generator, Optional
 
-from google.cloud import storage
+import google.cloud.storage
 
-from draft import api
-from draft import blob
-
-
-class Storage:
-
-    def __init__(self, bucket, storage_path):
-        self.bucket = bucket
-        self.storage_path = storage_path
-
-    def store(self, results):
-        representative_id = results[0]['match_id']
-        path = os.path.join(self.storage_path, '{}.json'.format(representative_id))
-        logging.info('Stored results: {}'.format(path))
-        self.bucket.blob(path).upload_from_string(json.dumps(results))
+from draft.data import api
+from draft.data import storage
 
 
 class Collector:
@@ -30,19 +15,16 @@ class Collector:
     def __init__(
         self,
         api_call: Callable[[Optional[int]], api.MatchesData],
-        storage: Storage,
-        cache: blob.Blob,
+        storage: storage.Storage,
     ):
         """Initialize the instance of Collector.
 
         Args:
             api_call: Function to call the API and get results.
             storage: Instance used to store data in GCS.
-            cache: Instance used to store runtime data in GCS.
         """
         self.api_call = api_call
         self.storage = storage
-        self.cache = cache
 
     def api_slice(
         self,
@@ -61,10 +43,10 @@ class Collector:
         """
         results = self.api_call(start_id)
         if results and stop_id is not None:
-            last_id = results[-1]['match_id']
+            last_id = results[-1][api.MatchID]
             if last_id <= stop_id:
-                index = max(i for i, m in enumerate(results)
-                            if m['match_id'] > stop_id) + 1
+                index = min(i for i, m in enumerate(results)
+                            if m[api.MatchID] <= stop_id)
                 results = results[:index]
         return results
 
@@ -87,7 +69,7 @@ class Collector:
         results = self.api_slice(start_id=current_id, stop_id=stop_id)
         while results:
             yield results
-            current_id = results[-1]['match_id']
+            current_id = results[-1][api.MatchID]
             results = self.api_slice(start_id=current_id, stop_id=stop_id)
 
     def batch(
@@ -126,35 +108,36 @@ class Collector:
             start_id: Optional id for the less_than_match_id argument in the API.
             batch_size: Size of the batches of data to store.
         """
-        earliest_id = self.cache.earliest
-        latest_id = self.cache.latest
-        stop_id = latest_id if start_id is not None else None
+        stop_id = self.storage.latest()
+        if start_id is not None:
+            # We're doing some backfilling, so don't mind the stop_id
+            stop_id = None
 
         num_matches = 0
         data_gen = self.data(start_id=start_id, stop_id=stop_id)
         batched_data = self.batch(data_gen, batch_size=batch_size)
         for batch in batched_data:
             self.storage.store(batch)
-            latest_new_id = batch[0]['match_id']
-            earliest_new_id = batch[-1]['match_id']
-            latest_id = max(latest_id or latest_new_id, latest_new_id)
-            earliest_id = min(earliest_id or earliest_new_id, earliest_new_id)
             num_matches += len(batch)
             if num_matches >= limit:
                 break
-
-        self.cache.latest = latest_id
-        self.cache.earliest = earliest_id
+        return num_matches
 
 
-def run(start_id, bucket_name, storage_path):
-    bucket = storage.Client().bucket(bucket_name)
+def run(start_id: Optional[int], bucket_name: str, storage_path: str):
+    """Run the data collection.
+
+    Args:
+        start_id: The match id from which to start collecting data.
+        bucket_name: The bucket to save results to.
+        storage_path: The path within the bucket to which to save the results.
+    """
     api_call = api.Api().public_matches
-    _storage = Storage(bucket=bucket, storage_path=storage_path)
-    cache_path = os.path.join(storage_path, 'cache.json')
-    cache_blob = blob.Blob(bucket.blob(cache_path))
-    collector = Collector(api_call=api_call, storage=_storage, cache=cache_blob)
-    collector.collect(
+    cache_filename = 'cache.json'
+    bucket = google.cloud.storage.Client().bucket(bucket_name)
+    strg = storage.Storage(bucket=bucket, storage_path=storage_path, cache_filename=cache_filename)
+    collector = Collector(api_call=api_call, storage=strg)
+    return collector.collect(
         limit=1e6,
         start_id=start_id,
         batch_size=1000,

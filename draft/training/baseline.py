@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 from draft import stats
-from draft.train import data_ingestion
+from draft.training import data_ingestion
 
 
 class TopSynergyBaseline:

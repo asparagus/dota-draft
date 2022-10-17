@@ -3,8 +3,8 @@ import argparse
 import numpy as np
 import torch
 
-from draft import api
-from draft.train import model
+from draft.data import api
+from draft.training import model
 
 
 if __name__ == '__main__':

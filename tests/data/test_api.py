@@ -1,6 +1,6 @@
 import os
 
-from draft import api
+from draft.data import api
 
 
 def test_init_without_key():

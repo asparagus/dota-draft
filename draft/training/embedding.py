@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils import data
 
-from draft.train import data_ingestion
+from draft.training import data_ingestion
 
 
 class CBOW(pl.LightningModule):
