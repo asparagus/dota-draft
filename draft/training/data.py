@@ -227,13 +227,24 @@ class MatchDataset(torch.utils.data.IterableDataset):
                 yield self.numpy_from_match(match)
 
 
-# # This code can be used to try this out.
-# if __name__ == '__main__':
-#     dataset = MatchDataset(
-#         bucket_name='dota-draft',
-#         prefix='data/matches',
-#         blob_regex='.*/\\d+.json',
-#         match_filter=ValidMatchFilter() and HighRankMatchFilter(60),
-#     )
-#     it = iter(dataset)
-#     print(next(it))
+# This code can be used to try this out.
+if __name__ == '__main__':
+    dataset = MatchDataset(
+        bucket_name='dota-draft',
+        prefix='data/matches',
+        blob_regex='.*/\\d+.json',
+        match_filter=ValidMatchFilter() and HighRankMatchFilter(60),
+    )
+    batch_size = 128
+    num_workers = 4
+    pin_memory = True
+    shuffle = False
+    batched_dataset = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        shuffle=shuffle,
+    )
+    it = iter(batched_dataset)
+    print(next(it))
