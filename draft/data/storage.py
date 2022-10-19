@@ -7,14 +7,14 @@ from typing import Optional, Tuple, TYPE_CHECKING
 from draft.data import api
 
 if TYPE_CHECKING:
-    import google.cloud.storage
-    import google.cloud.storage.bucket
+    import google.cloud.storage as gcs
+    import google.cloud.storage.bucket as gcs_bucket
 
 
 class Cache:
     """Cache on GCS used for keeping track of the earliest and latest ids seen."""
 
-    def __init__(self, blob: 'google.cloud.storage.Blob'):
+    def __init__(self, blob: 'gcs.Blob'):
         """Initialize the cache with an instance of a GCS blob.
 
         Args:
@@ -58,7 +58,7 @@ class Storage:
 
     def __init__(
             self,
-            bucket: 'google.cloud.storage.bucket.Bucket',
+            bucket: 'gcs_bucket.Bucket',
             storage_path: str,
             cache_filename: str,
         ):

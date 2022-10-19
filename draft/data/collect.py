@@ -3,7 +3,7 @@ import argparse
 
 from typing import Callable, Generator, Optional
 
-import google.cloud.storage
+import google.cloud.storage as gcs
 
 from draft.data import api
 from draft.data import storage
@@ -134,7 +134,7 @@ def run(start_id: Optional[int], bucket_name: str, storage_path: str):
     """
     api_call = api.Api().public_matches
     cache_filename = 'cache.json'
-    bucket = google.cloud.storage.Client().bucket(bucket_name)
+    bucket = gcs.Client().bucket(bucket_name)
     strg = storage.Storage(bucket=bucket, storage_path=storage_path, cache_filename=cache_filename)
     collector = Collector(api_call=api_call, storage=strg)
     return collector.collect(
