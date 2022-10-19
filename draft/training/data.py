@@ -193,7 +193,7 @@ class MatchDataset(torch.utils.data.IterableDataset):
             match: The match to parse
         """
         draft = cls.draft_from_match(match)
-        result = int(match['radiant_win'])
+        result = np.array([float(match['radiant_win'])])
         return draft, result
 
     def __iter__(self):

@@ -4,11 +4,15 @@ import numpy as np
 import torch
 
 from draft.data import api
-from draft.training import model
+from draft.model.net import Net
+
+
+def sigmoid(x):
+    return 1. / (1. + np.exp(-x))
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train model to predict the winning team.')
+    parser = argparse.ArgumentParser(description='Evaluate the model to predict the winning team.')
     parser.add_argument('--checkpoint', required=True, help='Path to saved checkpoint')
     args = parser.parse_args()
     torch.manual_seed(1)
@@ -24,27 +28,34 @@ if __name__ == '__main__':
 
     ## Define & Load
     params = torch.load(args.checkpoint)
-    embedding_dim = params['embeddings.embeddings.weight'].shape[1]
-    m = model.Model(130, embedding_dim)
-    m.load_state_dict(params)
+    m = Net.load_from_checkpoint(
+        args.checkpoint,
+        # This should come from the config
+        num_heroes=138,
+        dimensions=[256, 256, 256],
+    )
 
     ## Validate
     m.eval()
 
     draft = [
-        'Lifestealer',
-        'Enchantress',
+        # Radiant team
+        'Huskar',
+        'Dazzle',
+        'Windranger',
+        'Sven',
+        'Drow Ranger',
+        # Dire team
+        'Rubick',
+        'Chen',
         'Skywrath Mage',
         'Pangolier',
-        'Slardar',
-        'Rubick',
-        'Crystal Maiden',
-        'Magnus',
-        'Axe',
-        'Troll Warlord',
+        'Shadow Demon',
     ]
+
+    # Radiant team is better than dire, they should output a high probability
     draft = torch.tensor([
         [hero_from_name.get(name)['id']
          for name in draft]
     ], dtype=torch.long)
-    print(np.exp(m(draft).detach()))
+    print(sigmoid(m(draft).detach()))
