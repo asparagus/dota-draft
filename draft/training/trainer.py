@@ -1,12 +1,16 @@
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import early_stopping
+from pytorch_lightning.loggers import WandbLogger
 import torch.utils.data
-from draft.model.net import Net
+import wandb
+
+from draft.model.simplemodel import SimpleModel, SimpleModelConfig
 from draft.training.data import MatchDataset, ValidMatchFilter, HighRankMatchFilter
 
 
 if __name__ == '__main__':
     torch.manual_seed(1)
+    PROJECT = 'dota-draft'
     DATASET_CONFIG = {
         'bucket_name': 'dota-draft',
         'prefix': 'data/matches/68',
@@ -38,6 +42,10 @@ if __name__ == '__main__':
         validation_dataset,
         **DATALOADER_CONFIG,
     )
+    config = SimpleModelConfig(num_heroes=138, dimensions=(1,), symmetric=True)
+    model = SimpleModel(config)
+    experiment_name = 'baseline'
+    wandb_logger = WandbLogger(name=experiment_name, project=PROJECT)
     trainer = pl.Trainer(
         # gpus=1,
         default_root_dir='saved',
@@ -48,9 +56,16 @@ if __name__ == '__main__':
         callbacks=[
             early_stopping.EarlyStopping('val_loss'),
         ],
+        logger=wandb_logger,
     )
     trainer.fit(
-        Net(num_heroes=138, dimensions=[256, 256, 256]),
+        model,
         train_loader,
         validation_loader,
     )
+    checkpoint_path = 'saved/{experiment_name}-{epoch}.pth'.format(
+        experiment_name=experiment_name,
+        epoch=trainer.current_epoch,
+    )
+    trainer.save_checkpoint(checkpoint_path)
+    wandb.save(checkpoint_path)

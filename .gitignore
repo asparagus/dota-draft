@@ -12,6 +12,9 @@ __pycache__
 # Training artifacts
 *.pt
 lightning_logs
+wandb
+*.pth
+**/checkpoints/**
 
 # Credentials
 dota-draft-*.json

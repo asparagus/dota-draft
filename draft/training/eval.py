@@ -2,18 +2,16 @@ import argparse
 
 import numpy as np
 import torch
+import wandb
 
 from draft.data import api
-from draft.model.net import Net
-
-
-def sigmoid(x):
-    return 1. / (1. + np.exp(-x))
+from draft.model.simplemodel import SimpleModel
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate the model to predict the winning team.')
-    parser.add_argument('--checkpoint', required=True, help='Path to saved checkpoint')
+    parser.add_argument('--checkpoint', required=True, help='Name of the saved checkpoint')
+    parser.add_argument('--run_path', required=True, help='Path to the saved run')
     args = parser.parse_args()
     torch.manual_seed(1)
 
@@ -27,18 +25,15 @@ if __name__ == '__main__':
     hero_from_name = RetrieveHeroMap()
 
     ## Define & Load
-    params = torch.load(args.checkpoint)
-    m = Net.load_from_checkpoint(
+    wandb.restore(args.checkpoint, run_path=args.run_path)
+    model = SimpleModel.load_from_checkpoint(
         args.checkpoint,
-        # This should come from the config
-        num_heroes=138,
-        dimensions=[256, 256, 256],
     )
 
     ## Validate
-    m.eval()
+    model.eval()
 
-    draft = [
+    heroes = [
         # Radiant team
         'Huskar',
         'Dazzle',
@@ -56,6 +51,13 @@ if __name__ == '__main__':
     # Radiant team is better than dire, they should output a high probability
     draft = torch.tensor([
         [hero_from_name.get(name)['id']
-         for name in draft]
+         for name in heroes]
     ], dtype=torch.long)
-    print(sigmoid(m(draft).detach()))
+    print('Radiant:')
+    for hero in heroes[:5]:
+        print('- {hero}'.format(hero=hero))
+    print('Dire:')
+    for hero in heroes[5:]:
+        print('- {hero}'.format(hero=hero))
+    print('Odds:')
+    print(model(draft).detach())
