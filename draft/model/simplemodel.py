@@ -98,7 +98,7 @@ class SimpleModel(pl.LightningModule):
         else:
             return self._expand_probabilities(out)
 
-    def training_step(self, batch: torch.Tensor, batch_idx: idx):
+    def training_step(self, batch: torch.Tensor, batch_idx: int):
         """Run a training step.
 
         Args:
