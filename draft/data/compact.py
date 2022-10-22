@@ -6,11 +6,10 @@ python -m draft.data.compact \
     --input gs://dota-draft/data/matches/68*.json \
     --output gs://dota-draft/data/training/20221021 \
     --project dota-draft \
-    --temp_location  gs://dota-draft/tmp
+    --temp_location gs://dota-draft/tmp \
+    --setup_file setup.py
 
 """
-from typing import Dict
-
 import argparse
 import json
 import logging
