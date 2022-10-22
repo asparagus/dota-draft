@@ -102,7 +102,7 @@ if __name__ == '__main__':
         bucket_name='dota-draft',
         prefix='data/training/20221021',
         blob_regex='.*.txt',
-        match_filter=ValidMatchFilter() and HighRankMatchFilter(60),
+        match_filter=ValidMatchFilter() & HighRankMatchFilter(60),
     )
     batch_size = 128
     num_workers = 4

@@ -21,15 +21,19 @@ class MatchFilter(abc.ABC):
         raise NotImplementedError()
 
     def __or__(self, other: 'MatchFilter'):
-        """Defines the or operator between this and another filter."""
-        return Conjunction(self, other)
+        """Defines the or (|) operator between this and another filter."""
+        return Disjunction(self, other)
+
+    def __ror__(self, other):
+        """Defines the reverse or (|) operator between this and another filter."""
+        return self.__or__(other)
 
     def __and__(self, other: 'MatchFilter'):
-        """Defines the and operator between this and another filter."""
+        """Defines the and (&) operator between this and another filter."""
         return Conjunction(self, other)
 
-    def __not__(self):
-        """Defines the not operator for this filter."""
+    def __invert__(self):
+        """Defines the invert (~) operator for this filter."""
         return Negation(self)
 
 
