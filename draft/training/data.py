@@ -1,142 +1,14 @@
-import abc
-import json
+from typing import Optional
+
 import re
 import tempfile
-from typing import Dict, List, Optional
 
-import google.cloud.storage as gcs
 import numpy as np
+import google.cloud.storage as gcs
 import torch.utils.data
 
-
-class MatchFilter(abc.ABC):
-    """Base class to implement a filter for stored matches.
-    
-    Filters must implement a __call__ function that returns a bool
-    indicating whether the match should be kept.
-    """
-
-    @abc.abstractmethod
-    def __call__(self, match: Dict):
-        """Runs on the match and determines whether it should be kept.
-        
-        Args:
-            match: The match to evaluate
-        """
-        raise NotImplementedError()
-
-    def __or__(self, other: 'MatchFilter'):
-        """Defines the or operator between this and another filter."""
-        return Conjunction(self, other)
-
-    def __and__(self, other: 'MatchFilter'):
-        """Defines the and operator between this and another filter."""
-        return Conjunction(self, other)
-
-    def __not__(self):
-        """Defines the not operator for this filter."""
-        return Negation(self)
-
-
-class Disjunction(MatchFilter):
-    """A disjunction between two filters, will keep the match when any is true."""
-
-    def __init__(self, filter_a, filter_b):
-        """Initialize the disjunction with both filters.
-
-        Args:
-            filter_a: One of the filters
-            filter_b: The other filter
-        """
-        self.filter_a = filter_a
-        self.filter_b = filter_b
-
-    def __call__(self, match):
-        """Evaluates both filters and returns the or between them.
-
-        Args:
-            match: The match to evaluate
-        """
-        return self.filter_a(match) or self.filter_b(match)
-
-
-class Conjunction(MatchFilter):
-    """A conjunction between two filters, will keep the match when both are true."""
-
-    def __init__(self, filter_a, filter_b):
-        """Initialize the conjunction with both filters.
-
-        Args:
-            filter_a: One of the filters
-            filter_b: The other filter
-        """
-        self.filter_a = filter_a
-        self.filter_b = filter_b
-
-    def __call__(self, match):
-        """Evaluates both filters and returns the and between them.
-
-        Args:
-            match: The match to evaluate
-        """
-        return self.filter_a(match) and self.filter_b(match)
-
-
-class Negation(MatchFilter):
-    """A negation of a filter, will keep the match when the filter is false."""
-
-    def __init__(self, filter):
-        """Initialize the negation of the filter.
-
-        Args:
-            filter: The filter to negate
-        """
-        self.filter = filter
-
-    def __call__(self, match):
-        """Evaluates the filter and returns the opposite result.
-
-        Args:
-            match: The match to evaluate
-        """
-        return not self.filter(match)
-
-
-class ValidMatchFilter(MatchFilter):
-    """A filter for removing invalid matches where the draft did not finish."""
-
-    def __call__(self, match):
-        """Evaluate whether the match had 5 heroes on both sides.
-
-        Args:
-            match: The match to evaluate
-        """
-        return (
-            len(match['radiant_team'].split(',')) == 5 and
-            len(match['dire_team'].split(',')) == 5
-        )
-
-
-class HighRankMatchFilter(MatchFilter):
-    """A filter for removing matches below a certain rank."""
-
-    def __init__(self, minimum_rank: int):
-        """Initialize the filter with a minimum rank value.
-
-        Args:
-            minimum_rank: The minimum acceptable rank, matches
-                below this will be discarded"""
-        self.minimum_rank = minimum_rank
-
-    def __call__(self, match):
-        """Evaluate whether the match has the required rank.
-
-        Args:
-            match: The match to evaluate
-        """
-        return (
-            match['avg_rank_tier'] >= self.minimum_rank
-        )
+from draft.data.match import Match, Matches
+from draft.data.filter import MatchFilter, HighRankMatchFilter, ValidMatchFilter
 
 
 class MatchDataset(torch.utils.data.IterableDataset):
@@ -163,37 +35,34 @@ class MatchDataset(torch.utils.data.IterableDataset):
         self.match_filter = match_filter
 
     @classmethod
-    def matches_from_file(cls, path: str) -> List[Dict]:
+    def matches_from_file(cls, path: str) -> Matches:
         """Retrieve the matches stored in a given file.
 
         Args:
             path: The path to the file with matches in the local file system.
         """
         with open(path, 'r') as f:
-            return json.load(f)
+            lines = f.readlines()
+            return [Match.loads(l) for l in lines]
 
     @classmethod
-    def draft_from_match(cls, match: Dict) -> np.array:
+    def draft_from_match(cls, match: Match) -> np.array:
         """Retrieve the vector of heroes drafted for this match.
 
         Args:
             match: The match to parse
         """
-        all_heroes = (
-            match['radiant_team'].split(',') +
-            match['dire_team'].split(',')
-        )
-        return np.array([int(h) for h in all_heroes])
+        return np.array(match.radiant_heroes + match.dire_heroes)
 
     @classmethod
-    def numpy_from_match(cls, match: Dict):
+    def numpy_from_match(cls, match: Match):
         """Retrieve the numpy features, label for this match.
 
         Args:
             match: The match to parse
         """
         draft = cls.draft_from_match(match)
-        result = np.array([float(match['radiant_win'])])
+        result = np.array([float(match.radiant_win)])
         return draft, result
 
     def __iter__(self):
@@ -231,8 +100,8 @@ class MatchDataset(torch.utils.data.IterableDataset):
 if __name__ == '__main__':
     dataset = MatchDataset(
         bucket_name='dota-draft',
-        prefix='data/matches',
-        blob_regex='.*/\\d+.json',
+        prefix='data/training/20221021',
+        blob_regex='.*.txt',
         match_filter=ValidMatchFilter() and HighRankMatchFilter(60),
     )
     batch_size = 128

@@ -1,12 +1,16 @@
-"""Cloud Function scheduled to retrieve new data from the API.""" 
-import argparse
+"""Cloud Function scheduled to retrieve new data from the API.
 
+For the code to deploy this function, check main.py.
+"""
 from typing import Callable, Generator, Optional
+
+import argparse
 
 import google.cloud.storage as gcs
 
 from draft.data import api
 from draft.data import storage
+from draft.data.match import Matches
 
 
 class Collector:
@@ -14,7 +18,7 @@ class Collector:
 
     def __init__(
         self,
-        api_call: Callable[[Optional[int]], api.MatchesData],
+        api_call: Callable[[Optional[int]], Matches],
         storage: storage.Storage,
     ):
         """Initialize the instance of Collector.
@@ -30,7 +34,7 @@ class Collector:
         self,
         start_id: Optional[int] = None,
         stop_id: Optional[int] = None,
-    ) -> api.MatchesData:
+    ) -> Matches:
         """Obtains a slice of data from the API.
 
         Args:
@@ -43,10 +47,10 @@ class Collector:
         """
         results = self.api_call(start_id)
         if results and stop_id is not None:
-            last_id = results[-1][api.MatchID]
+            last_id = results[-1].match_id
             if last_id <= stop_id:
                 index = min(i for i, m in enumerate(results)
-                            if m[api.MatchID] <= stop_id)
+                            if m.match_id <= stop_id)
                 results = results[:index]
         return results
 
@@ -54,7 +58,7 @@ class Collector:
         self,
         start_id: Optional[int] = None,
         stop_id: Optional[int] = None,
-    ) -> Generator[api.MatchesData, None, None]:
+    ) -> Generator[Matches, None, None]:
         """Creates a generator for data from the API.
 
         Args:
@@ -69,14 +73,14 @@ class Collector:
         results = self.api_slice(start_id=current_id, stop_id=stop_id)
         while results:
             yield results
-            current_id = results[-1][api.MatchID]
+            current_id = results[-1].match_id
             results = self.api_slice(start_id=current_id, stop_id=stop_id)
 
     def batch(
         self,
-        data_generator: Generator[api.MatchesData, None, None],
+        data_generator: Generator[Matches, None, None],
         batch_size: int,
-    ) -> Generator[api.MatchesData, None, None]:
+    ) -> Generator[Matches, None, None]:
         """Shapes generated data into batches of the given size.
 
         Args:

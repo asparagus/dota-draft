@@ -3,17 +3,16 @@
 Implements functions to request and parse OpenDota's data.
 API documentation is available at: https://docs.opendota.com/
 """
+from typing import Dict, List, Optional
+
 import json
 import logging
 import os
 import requests
-from typing import Any, Dict, List, Optional
 from urllib import parse
 
-
-MatchID = 'match_id'
-MatchData = Dict[str, Any]
-MatchesData = List[MatchData]
+from draft.data.hero import Hero
+from draft.data.match import Match, Matches
 
 
 class Api(object):
@@ -51,11 +50,11 @@ class Api(object):
         response = requests.get(url, params)
         return json.loads(response.text)
 
-    def heroes(self):
+    def heroes(self) -> List[Hero]:
         """Retrieve heroes information."""
-        return self._request(Api.HEROES_URL)
+        return [Hero(h) for h in self._request(Api.HEROES_URL)]
 
-    def parsed_matches(self, less_than_match_id: Optional[int] = None) -> MatchesData:
+    def parsed_matches(self, less_than_match_id: Optional[int] = None) -> Matches:
         """Retrieve parsed match ids.
 
         Args:
@@ -64,10 +63,13 @@ class Api(object):
         Returns:
             Array of match ids.
         """
-        return self._request(
-            Api.PARSED_MATCHES_URL, less_than_match_id=less_than_match_id)
-    
-    def public_matches(self, less_than_match_id: Optional[int] = None) -> MatchesData:
+        return [
+            Match(m)
+            for m in self._request(
+                Api.PARSED_MATCHES_URL, less_than_match_id=less_than_match_id)
+        ]
+
+    def public_matches(self, less_than_match_id: Optional[int] = None) -> Matches:
         """Retrieve public matches.
 
         Args:
@@ -76,10 +78,13 @@ class Api(object):
         Returns:
             Array of matches.
         """
-        return self._request(
-            Api.PUBLIC_MATCHES_URL, less_than_match_id=less_than_match_id)
+        return [
+            Match(m)
+            for m in self._request(
+                Api.PUBLIC_MATCHES_URL, less_than_match_id=less_than_match_id)
+        ]
 
-    def match(self, match_id: int) -> MatchData:
+    def match(self, match_id: int) -> Match:
         """Retrieve a match.
 
         Args:
@@ -87,4 +92,4 @@ class Api(object):
         Returns:
             The match object as obtained from the API.
         """
-        return self._request(Api.MATCHES_URL % match_id)
+        return Match(self._request(Api.MATCHES_URL % match_id))

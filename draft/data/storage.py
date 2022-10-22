@@ -1,8 +1,9 @@
 """This module contains the Blob class, which mirrors a GCS Blob."""
+from typing import Optional, Tuple, TYPE_CHECKING
+
 import json
 import logging
 import os
-from typing import Optional, Tuple, TYPE_CHECKING
 
 from draft.data import api
 
