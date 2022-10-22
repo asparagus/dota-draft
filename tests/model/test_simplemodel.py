@@ -10,13 +10,7 @@ def test_symmetry():
         dimensions=(1,),
         symmetric=True,
     )
-    regular_config = simplemodel.SimpleModelConfig(
-        num_heroes=25,
-        dimensions=(1,),
-        symmetric=False,
-    )
     symmetric_model = simplemodel.SimpleModel(symmetric_config)
-    regular_model = simplemodel.SimpleModel(regular_config)
     draft = torch.tensor([[1,2,3,4,5,6,7,8,9,10]], dtype=torch.long)
     opposite_draft = torch.tensor([[6,7,8,9,10,1,2,3,4,5]], dtype=torch.long)
     symmetric_result = symmetric_model(draft)
