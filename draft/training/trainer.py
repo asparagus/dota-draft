@@ -4,8 +4,9 @@ from pytorch_lightning.loggers import WandbLogger
 import torch.utils.data
 import wandb
 
+from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
 from draft.model.simplemodel import SimpleModel, SimpleModelConfig
-from draft.training.data import MatchDataset, ValidMatchFilter, HighRankMatchFilter
+from draft.training.ingestion import MatchDataset
 
 
 if __name__ == '__main__':
