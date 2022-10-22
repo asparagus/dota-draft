@@ -136,7 +136,6 @@ def run(argv=None, save_main_session=True):
         for partition, name, output in partitions_and_outputs:
             (partition
                 | 'Serialize {}'.format(name) >> beam.Map(Match.dumps)
-                # | 'Batch {}'.format(name) >> beam.BatchElements(min_batch_size=1, max_batch_size=10000)
                 | 'Write {}'.format(name) >> WriteToText(output, file_name_suffix='.txt'))
 
 
