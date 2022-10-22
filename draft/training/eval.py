@@ -1,10 +1,22 @@
+from typing import Dict
+
 import argparse
 
 import torch
 import wandb
 
-from draft.data import api
+from draft.data.api import Api
+from draft.data.hero import Hero
 from draft.model.simplemodel import SimpleModel
+
+
+def BuildHeroMap() -> Dict[str, Hero]:
+    """Build a mapping from hero's name to their data."""
+    result = Api().heroes()
+    data = {}
+    for hero in result:
+        data[hero.localized_name] = hero
+    return data
 
 
 if __name__ == '__main__':
@@ -14,14 +26,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     torch.manual_seed(1)
 
-    def RetrieveHeroMap():
-        result = api.Api().heroes()
-        data = {}
-        for hero_data in result:
-            data[hero_data['localized_name']] = hero_data
-        return data
-
-    hero_from_name = RetrieveHeroMap()
+    hero_from_name = BuildHeroMap()
 
     ## Define & Load
     wandb.restore(args.checkpoint, run_path=args.run_path)
@@ -48,10 +53,8 @@ if __name__ == '__main__':
     ]
 
     # Radiant team is better than dire, they should output a high probability
-    draft = torch.tensor([
-        [hero_from_name.get(name)['id']
-         for name in heroes]
-    ], dtype=torch.long)
+    hero_ids = [hero_from_name.get(hero_name)._id for hero_name in heroes]
+    draft = torch.tensor(hero_ids, dtype=torch.long)
     print('Radiant:')
     for hero in heroes[:5]:
         print('- {hero}'.format(hero=hero))
