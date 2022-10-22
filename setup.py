@@ -18,5 +18,5 @@ setuptools.setup(
     author_email='arielperezch@gmail.com',
     url='https://github.com/asparagus/dota-draft',
     install_requires=requirements,
-    packages=['draft', 'draft.data'],  # Omit test package
+    packages=['draft', 'draft.data', 'draft.model', 'draft.training'],
 )
