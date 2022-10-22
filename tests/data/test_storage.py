@@ -1,9 +1,11 @@
 from unittest import mock
+
 import json
 import os
 import pytest
 
 from draft.data import storage
+from draft.data.match import Match
 
 
 def blob_with_content(blob_content):
@@ -48,10 +50,10 @@ def cache_filename():
 @pytest.fixture
 def batch():
     return [
-        {'match_id': 8},
-        {'match_id': 7},
-        {'match_id': 6},
-        {'match_id': 5},
+        Match({'match_id': 8}),
+        Match({'match_id': 7}),
+        Match({'match_id': 6}),
+        Match({'match_id': 5}),
     ]
 
 
@@ -61,7 +63,7 @@ def bucket(cache_blob, empty_blob, storage_path, cache_filename, batch):
     def blob(path):
         if path == os.path.join(storage_path, cache_filename):
             return cache_blob
-        elif path == os.path.join(storage_path, '{}.json'.format(batch[0]['match_id'])):
+        elif path == os.path.join(storage_path, '{}.json'.format(batch[0].match_id)):
             return empty_blob
         else:
             return None
@@ -141,4 +143,4 @@ def test_storage_store(bucket, storage_path, cache_filename, batch, cache_blob, 
     # empty blob is set up to receive the new batch of matches
     uploaded_matches_text = empty_blob.upload_from_string.call_args.args[0]
     uploaded_matches = json.loads(uploaded_matches_text)
-    assert uploaded_matches == batch
+    assert uploaded_matches == [m._data for m in batch]

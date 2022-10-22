@@ -10,6 +10,7 @@ from draft.data import api
 if TYPE_CHECKING:
     import google.cloud.storage as gcs
     import google.cloud.storage.bucket as gcs_bucket
+    from draft.data import match
 
 
 class Cache:
@@ -88,20 +89,20 @@ class Storage:
         """
         return self.cache.boundaries[1]
 
-    def store(self, batch: 'api.MatchesData'):
+    def store(self, batch: 'match.Matches'):
         """Store a new batch of matches.
 
         Args:
             batch: A list of matches to store.
         """
-        batch_latest = batch[0][api.MatchID]
-        batch_earliest = batch[-1][api.MatchID]
+        batch_latest = batch[0].match_id
+        batch_earliest = batch[-1].match_id
         earliest, latest = self.cache.boundaries
         earliest = min(earliest, batch_earliest) if earliest else batch_earliest
         latest = max(latest, batch_latest) if latest else batch_latest
 
         path = os.path.join(self.storage_path, '{}.json'.format(batch_latest))
-        payload = json.dumps(batch)
+        payload = json.dumps([m._data for m in batch])
         self.bucket.blob(path).upload_from_string(payload)
         self.cache.boundaries = earliest, latest
         logging.info('Stored matches: {}'.format(path))
