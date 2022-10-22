@@ -7,7 +7,7 @@ python -m draft.data.compact \
     --output gs://dota-draft/data/training/20221021 \
     --project dota-draft \
     --temp_location gs://dota-draft/tmp \
-    --setup_file setup.py
+    --setup_file ./setup.py
 
 """
 import argparse
@@ -135,7 +135,7 @@ def run(argv=None, save_main_session=True):
 
         for partition, name, output in partitions_and_outputs:
             (partition
-                | 'Serialize {}'.format(name) >> beam.Filter(json.dumps)
+                | 'Serialize {}'.format(name) >> beam.Map(json.dumps)
                 # | 'Batch {}'.format(name) >> beam.BatchElements(min_batch_size=1, max_batch_size=10000)
                 | 'Write {}'.format(name) >> WriteToText(output, file_name_suffix='.txt'))
 
