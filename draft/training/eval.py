@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     # Radiant team is better than dire, they should output a high probability
     hero_ids = [hero_from_name.get(hero_name)._id for hero_name in heroes]
-    draft = torch.tensor(hero_ids, dtype=torch.long)
+    draft = torch.tensor([hero_ids], dtype=torch.long)
     print('Radiant:')
     for hero in heroes[:5]:
         print('- {hero}'.format(hero=hero))
