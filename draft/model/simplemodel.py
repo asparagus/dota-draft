@@ -37,10 +37,10 @@ class SimpleModel(pl.LightningModule):
         self.sequential = nn.Sequential(*layers)
         if config.symmetric:
             self.activation = nn.Softmax(dim=1)
-            self.loss_fn = nn.functional.binary_cross_entropy_with_logits
+            self.loss_fn = nn.functional.cross_entropy
         else:
             self.activation = nn.Sigmoid()
-            self.loss_fn = nn.functional.cross_entropy
+            self.loss_fn = nn.functional.binary_cross_entropy_with_logits
         self.save_hyperparameters()
 
     def _expand_probabilities(self, p: torch.Tensor):
