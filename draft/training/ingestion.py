@@ -77,7 +77,7 @@ class MatchDataset(torch.utils.data.IterableDataset):
         blobs = bucket.list_blobs(prefix=self.prefix)
 
         if self.blob_regex is not None:
-            blobs = filter(lambda blob: self.blob_regex.match(blob.name), blobs)
+            blobs = filter(lambda blob: self.blob_regex.search(blob.name), blobs)
 
         if worker_info is not None:  # multi-process data loading, use every n-th blob
             blobs = (

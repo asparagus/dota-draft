@@ -16,7 +16,7 @@ if __name__ == '__main__':
         'bucket_name': 'dota-draft',
         'prefix': 'data/training/20221021',
         'match_filter': (
-            ValidMatchFilter() and
+            ValidMatchFilter() &
             HighRankMatchFilter(30)
         ),
     }
@@ -29,11 +29,11 @@ if __name__ == '__main__':
 
     training_dataset = MatchDataset(
         **DATASET_CONFIG,
-        blob_regex='train.*.json',
+        blob_regex='train.*.txt',
     )
     validation_dataset = MatchDataset(
         **DATASET_CONFIG,
-        blob_regex='val.*.json',
+        blob_regex='val.*.txt',
     )
     train_loader = torch.utils.data.DataLoader(
         training_dataset,
