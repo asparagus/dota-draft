@@ -4,6 +4,7 @@
 # Python binaries
 __pycache__
 *.pyc
+*.egg-info/*
 
 # Data
 *.json
