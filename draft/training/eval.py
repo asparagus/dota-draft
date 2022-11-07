@@ -1,6 +1,7 @@
 from typing import Dict
 
 import argparse
+import os
 
 import torch
 import wandb
@@ -10,10 +11,11 @@ from draft.data.api import Api
 from draft.data.hero import Hero
 from draft.model.mlp import MLP, MLPConfig
 from draft.model.wrapper import ModelWrapper, ModelWrapperConfig
+from draft.training.argument import Arguments, read_config
 
 
-CONFIG_FILE = "config.yaml"
-ROOT_DIR = "/tmp"
+CONFIG_FILE = 'config.yaml'
+ROOT_DIR = '/tmp'
 
 
 def BuildHeroMap() -> Dict[str, Hero]:
@@ -33,15 +35,21 @@ if __name__ == '__main__':
     hero_from_name = BuildHeroMap()
 
     ## Define & Load
-    ckpt_file = wandb.restore(args.checkpoint, run_path=args.run_path, root=ROOT_DIR)
-    config_file = wandb.restore(CONFIG_FILE, run_path=args.run_path, root=ROOT_DIR)
+    root_dir = os.path.join(ROOT_DIR, args.run_path)
+    ckpt_file = wandb.restore(args.checkpoint, run_path=args.run_path, root=root_dir)
+    config_file = wandb.restore(CONFIG_FILE, run_path=args.run_path, root=root_dir)
     with open(config_file.name, 'r') as f:
         config = yaml.safe_load(f)
-    mlp_config = MLPConfig(num_heroes=138, layers=[32, 16])
-    wrapper_config = ModelWrapperConfig(symmetric=True)
+    mlp_config = MLPConfig(
+        num_heroes=read_config(Arguments.NUM_HEROES, config=config),
+        layers=[32, 16],
+    )
+    wrapper_config = ModelWrapperConfig(
+        symmetric=read_config(Arguments.MODEL_SYMMETRIC, config=config),
+    )
     module = MLP(mlp_config)
     model = ModelWrapper(
-        config=ModelWrapperConfig(**config['model']['value']),
+        config=wrapper_config,
         module=module,
     )
     ckpt = torch.load(ckpt_file.name)
