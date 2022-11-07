@@ -13,6 +13,7 @@ from urllib import parse
 
 from draft.data.hero import Hero
 from draft.data.match import Match, Matches
+from draft.providers import OPENDOTA
 
 
 class Api(object):
@@ -31,9 +32,9 @@ class Api(object):
             api_key: The key to the opendota api. If omitted, the DOTA_API_KEY
                 environment variable will be used.
         """
-        self.api_key = api_key or os.getenv('DOTA_API_KEY')
+        self.api_key = api_key or OPENDOTA.api_key
         if self.api_key is None:
-            logging.warning('DOTA_API_KEY not set')
+            logging.warning('OpenDota api_key not set')
 
     def _request(self, url, *args, **kwargs) -> Dict:
         """Internal request function.

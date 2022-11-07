@@ -1,3 +1,4 @@
+from typing import Optional
 from attrs import define
 
 import torch
@@ -17,7 +18,7 @@ class ModelWrapperConfig:
 class ModelWrapper(pl.LightningModule):
     """Wrapper around an ml module."""
 
-    def __init__(self, config: ModelWrapperConfig, module: torch.nn.Module):
+    def __init__(self, config: ModelWrapperConfig, module: Optional[torch.nn.Module] = None):
         """Initialize the model with the given config.
 
         Args:
@@ -27,14 +28,14 @@ class ModelWrapper(pl.LightningModule):
         super().__init__()
         self.config = config
         self.module = module
-        self.accuracy = torchmetrics.Accuracy()
-        self.loss_fn = nn.functional.binary_cross_entropy_with_logits
-        self.activation_fn = (
-            nn.Softmax(dim=1)
-            if config.symmetric
-            else nn.Sigmoid()
-        )
-        self.save_hyperparameters(ignore=['module'])
+        if config.symmetric:
+            self.accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
+            self.loss_fn = nn.functional.cross_entropy
+            self.activation_fn = nn.Softmax(dim=1)
+        else:
+            self.accuracy = torchmetrics.classification.BinaryAccuracy()
+            self.loss_fn = nn.functional.binary_cross_entropy
+            self.activation_fn = nn.Sigmoid()
 
     def preprocess_input(self, x: torch.Tensor):
         """Preprocessing function for the inputs.
@@ -50,7 +51,7 @@ class ModelWrapper(pl.LightningModule):
         Args:
             y: (batch_size, 1) vector with the results of each match
         """
-        return y
+        return y.byte()
 
     def flip(self, x: torch.Tensor):
         """Flip teams.
@@ -67,13 +68,6 @@ class ModelWrapper(pl.LightningModule):
         dire = x.narrow(dim=1, start=5, length=5)
         return torch.cat([dire, radiant], dim=1)
 
-    def predict_from_logits(self, logits: torch.Tensor):
-        return self.activation_fn(logits)[:, 0:1]
-
-    def _forward(self, x: torch.Tensor):
-        x = self.preprocess_input(x)
-        return self.module(x)
-
     def forward(self, x: torch.Tensor):
         """Compute the forward pass from the draft until the win probabilities.
 
@@ -83,14 +77,16 @@ class ModelWrapper(pl.LightningModule):
         Returns:
             (batch_size, 2) win probabilities for both teams
         """
-        logits = self._forward(x)
+        processed = self.preprocess_input(x)
+        logits = self.module(processed)
 
         if self.config.symmetric:
             flipped = self.flip(x)
-            flipped_logits = self._forward(flipped)
+            flipped_processed = self.preprocess_input(flipped)
+            flipped_logits = self.module(flipped_processed)
             logits = torch.cat([logits, flipped_logits], dim=1)
 
-        return self.predict_from_logits(logits)
+        return self.activation_fn(logits)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int):
         """Run a training step.
@@ -102,12 +98,11 @@ class ModelWrapper(pl.LightningModule):
         x, y = batch
         x = self.preprocess_input(x)
         y = self.preprocess_label(y)
-        logits = self._forward(x)
-        loss = self.loss_fn(logits, y)
+        out = self.forward(x)
+        loss = self.loss_fn(out, y)
         self.log('train_loss', loss)
 
-        preds = self.predict_from_logits(logits)
-        self.accuracy(preds, y.int())
+        self.accuracy(out, y)
         self.log('train_acc', self.accuracy)
         return loss
 
@@ -121,16 +116,15 @@ class ModelWrapper(pl.LightningModule):
         x, y = batch
         x = self.preprocess_input(x)
         y = self.preprocess_label(y)
-        logits = self._forward(x)
-        loss = self.loss_fn(logits, y)
+        out = self.forward(x)
+        loss = self.loss_fn(out, y)
         self.log('val_loss', loss)
 
-        preds = self.predict_from_logits(logits)
-        self.accuracy(preds, y.int())
+        self.accuracy(out, y)
         self.log('val_acc', self.accuracy)
-        return loss
+        return {'loss': loss, 'predictions': out}
 
     def configure_optimizers(self):
         """Set up the optimizer."""
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = optim.Adam(self.parameters(), lr=1e-3, weight_decay=1e-5)
         return optimizer

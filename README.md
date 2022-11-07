@@ -27,3 +27,11 @@ ML Application for drafting heroes in the Dota 2 game.
 
 ### Pending
 5. Use the trained model to suggest heroes in a web UI using [torch-js](https://github.com/torch-js/torch-js)
+
+### Configs
+In order for the project to work as intended, you'll need to set up the following files:
+- `draft/configs/gcs.yaml`
+- `draft/configs/opendota.yaml`
+- `draft/configs/wandb.yaml`
+
+See the specific [README](draft/configs/README.md) for more details.

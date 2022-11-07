@@ -62,7 +62,7 @@ class MatchDataset(torch.utils.data.IterableDataset):
             match: The match to parse
         """
         draft = cls.draft_from_match(match)
-        result = np.array([float(match.radiant_win)])
+        result = match.radiant_win
         return draft, result
 
     def __iter__(self):
@@ -98,9 +98,10 @@ class MatchDataset(torch.utils.data.IterableDataset):
 
 # This code can be used to try this out.
 if __name__ == '__main__':
+    from draft.providers import GCS
     dataset = MatchDataset(
-        bucket_name='dota-draft',
-        prefix='data/training/20221021',
+        bucket_name=GCS.bucket,
+        prefix='data/training/',
         blob_regex='.*.txt',
         match_filter=ValidMatchFilter() & HighRankMatchFilter(60),
     )

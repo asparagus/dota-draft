@@ -3,10 +3,10 @@
 python -m draft.data.compact \
     --runner DataflowRunner \
     --region us-west2 \
-    --input gs://dota-draft/data/matches/68*.json \
-    --output gs://dota-draft/data/training/20221021 \
-    --project dota-draft \
-    --temp_location gs://dota-draft/tmp \
+    --input gs://<BUCKET>/data/matches/<PATTERN>.json \
+    --output gs://<BUCKET>/data/training/<DATE> \
+    --project <PROJECT> \
+    --temp_location gs://<BUCKET>/tmp \
     --setup_file ./setup.py
 
 """

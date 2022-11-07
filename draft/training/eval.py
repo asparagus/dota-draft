@@ -4,10 +4,16 @@ import argparse
 
 import torch
 import wandb
+import yaml
 
 from draft.data.api import Api
 from draft.data.hero import Hero
-from draft.model.wrapper import ModelWrapper
+from draft.model.mlp import MLP, MLPConfig
+from draft.model.wrapper import ModelWrapper, ModelWrapperConfig
+
+
+CONFIG_FILE = "config.yaml"
+ROOT_DIR = "/tmp"
 
 
 def BuildHeroMap() -> Dict[str, Hero]:
@@ -27,31 +33,41 @@ if __name__ == '__main__':
     hero_from_name = BuildHeroMap()
 
     ## Define & Load
-    wandb.restore(args.checkpoint, run_path=args.run_path)
-    model = ModelWrapper.load_from_checkpoint(
-        args.checkpoint,
+    ckpt_file = wandb.restore(args.checkpoint, run_path=args.run_path, root=ROOT_DIR)
+    config_file = wandb.restore(CONFIG_FILE, run_path=args.run_path, root=ROOT_DIR)
+    with open(config_file.name, 'r') as f:
+        config = yaml.safe_load(f)
+    mlp_config = MLPConfig(num_heroes=138, layers=[32, 16])
+    wrapper_config = ModelWrapperConfig(symmetric=True)
+    module = MLP(mlp_config)
+    model = ModelWrapper(
+        config=ModelWrapperConfig(**config['model']['value']),
+        module=module,
     )
+    ckpt = torch.load(ckpt_file.name)
+    model_ckpt = ckpt['state_dict']
+    model.load_state_dict(model_ckpt)
 
     ## Validate
     model.eval()
 
     heroes = [
         # Radiant team
-        'Huskar',
-        'Dazzle',
-        'Windranger',
-        'Sven',
-        'Drow Ranger',
-        # Dire team
-        'Rubick',
-        'Chen',
-        'Skywrath Mage',
+        'Tiny',
+        'Mirana',
         'Pangolier',
-        'Shadow Demon',
+        'Beastmaster',
+        'Medusa',
+        # Dire team
+        'Marci',
+        'Leshrac',
+        'Silencer',
+        'Naga Siren',
+        'Ember Spirit',
     ]
 
     # Radiant team is better than dire, they should output a high probability
-    hero_ids = [hero_from_name.get(hero_name)._id for hero_name in heroes]
+    hero_ids = [hero_from_name[hero_name]._id for hero_name in heroes]
     draft = torch.tensor([hero_ids], dtype=torch.long)
     print('Radiant:')
     for hero in heroes[:5]:

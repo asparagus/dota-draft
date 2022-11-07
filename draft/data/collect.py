@@ -11,6 +11,7 @@ import google.cloud.storage as gcs
 from draft.data import api
 from draft.data import storage
 from draft.data.match import Matches
+from draft.providers import GCS
 
 
 class Collector:
@@ -156,17 +157,12 @@ if __name__ == '__main__':
         help='Match id to determine the backfilling point. Only matches before this will be collected.',
     )
     parser.add_argument(
-        '--bucket_name',
-        default='dota-draft',
-        help='Bucket name to store the results. Default: dota-draft',
-    )
-    parser.add_argument(
         '--storage_path',
         default='data/matches',
         help='Path within the bucket to store resulting matches. Default: data/matches',
     )
     args = parser.parse_args()
     run(start_id=args.start_id,
-        bucket_name=args.bucket_name,
+        bucket_name=GCS.bucket,
         storage_path=args.storage_path,
     )

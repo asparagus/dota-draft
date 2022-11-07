@@ -1,0 +1,14 @@
+data.path:
+  desc: Path to the training / validation / test sets
+  value: null
+data.batch_size:
+  desc: Number of elements in each training and validation batch
+  value: 256
+
+reproducibility.seed:
+  desc: Seed used for random number generation
+  value: 1
+
+model.symmetric:
+  desc: Whether the model is forced to give the same result when swapping radiant and dire
+  value: true
