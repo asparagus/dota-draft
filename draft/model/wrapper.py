@@ -13,6 +13,8 @@ import pytorch_lightning as pl
 class ModelWrapperConfig:
     """Configuration used for the model wrapper."""
     symmetric: bool
+    learning_rate: float = 1e-3
+    weight_decay: float = 1e-5
 
 
 class ModelWrapper(pl.LightningModule):
@@ -36,6 +38,8 @@ class ModelWrapper(pl.LightningModule):
             self.accuracy = torchmetrics.classification.BinaryAccuracy()
             self.loss_fn = nn.functional.binary_cross_entropy
             self.activation_fn = nn.Sigmoid()
+        self.learning_rate = self.config.learning_rate
+        self.weight_decay = self.config.weight_decay
 
     def preprocess_input(self, x: torch.Tensor):
         """Preprocessing function for the inputs.
@@ -126,5 +130,9 @@ class ModelWrapper(pl.LightningModule):
 
     def configure_optimizers(self):
         """Set up the optimizer."""
-        optimizer = optim.Adam(self.parameters(), lr=1e-3, weight_decay=1e-5)
+        optimizer = optim.Adam(
+            self.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
+        )
         return optimizer

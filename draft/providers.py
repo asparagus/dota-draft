@@ -6,7 +6,6 @@ import yaml
 def yaml_load(path):
     with open(path, 'r') as f:
         return yaml.safe_load(f)
-    return {}
 
 
 @define

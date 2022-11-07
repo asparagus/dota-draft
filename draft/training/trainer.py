@@ -101,7 +101,7 @@ if __name__ == '__main__':
         # gpus=1,
         # precision=16,
         default_root_dir='saved',
-        max_epochs=5,
+        max_epochs=1000,
         check_val_every_n_epoch=2,
         callbacks=callbacks,
         logger=logger,

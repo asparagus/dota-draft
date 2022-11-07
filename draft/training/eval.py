@@ -41,7 +41,7 @@ if __name__ == '__main__':
     with open(config_file.name, 'r') as f:
         config = yaml.safe_load(f)
     mlp_config = MLPConfig(
-        num_heroes=read_config(Arguments.NUM_HEROES, config=config),
+        num_heroes=read_config(Arguments.MODEL_NUM_HEROES, config=config),
         layers=[32, 16],
     )
     wrapper_config = ModelWrapperConfig(
