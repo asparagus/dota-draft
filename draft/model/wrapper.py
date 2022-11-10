@@ -1,3 +1,4 @@
+"""Module containing the ModelWrapper lightning module and its config."""
 from typing import Optional
 from attrs import define
 
@@ -55,7 +56,9 @@ class ModelWrapper(pl.LightningModule):
         Args:
             y: (batch_size, 1) vector with the results of each match
         """
-        return y.byte()
+        if self.config.symmetric:
+            return y.byte()
+        return y.float().unsqueeze(1)
 
     def flip(self, x: torch.Tensor):
         """Flip teams.

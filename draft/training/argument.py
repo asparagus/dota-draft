@@ -1,5 +1,5 @@
 import attrs
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import wandb
 
@@ -18,6 +18,7 @@ class Arguments:
     MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=138)
     MODEL_SYMMETRIC = Argument('model.symmetric', bool, default=True)
     MODEL_LEARNING_RATE = Argument('model.learning_rate', float, default=1e-3)
+    MODEL_LAYERS = Argument('model.layers', List[int], default=[32, 16])
     MODEL_WEIGHT_DECAY = Argument('model.weight_decay', float, default=1e-5)
 
 

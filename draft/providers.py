@@ -1,9 +1,18 @@
+"""Module with parsed configurations to the service providers used in this project."""
 from attrs import define
 from typing import Optional
 import yaml
 
 
-def yaml_load(path):
+def yaml_load(path: str):
+    """Load a yaml file and return the parsed content.
+
+    Args:
+        path: The path to the yaml file
+
+    Returns:
+        The parsed yaml file as a dict
+    """
     with open(path, 'r') as f:
         return yaml.safe_load(f)
 

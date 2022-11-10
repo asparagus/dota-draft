@@ -2,9 +2,10 @@
 
 Example run:
 ```
-python -m draft.training.trainer --data=data/training/20221102
+python -m draft.training.trainer --data.path=data/training/20221102
 ```
 """
+from typing import List
 import argparse
 import os
 import yaml
@@ -21,7 +22,7 @@ from draft.model.mlp import MLP, MLPConfig
 from draft.model.wrapper import ModelWrapper, ModelWrapperConfig
 from draft.providers import GCS, WANDB
 from draft.training.argument import Argument, Arguments, read_config
-from draft.training.callbacks import LogOutputHistogram
+from draft.training.callbacks import OutputLoggerCallback, WeightLoggerCallback
 from draft.training.ingestion import MatchDataset
 
 
@@ -36,7 +37,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train the model.')
     parser.add_argument('--run_name', default=None, help='Name for the run')
     for arg in ConfigArguments:
-        parser.add_argument(f'--{arg.name}', type=arg.type, required=arg.default is None, default=arg.default)
+        _type = arg.type
+        if _type == List[int]:
+            parser.add_argument(f'--{arg.name}', type=int, required=arg.default is None, default=arg.default, nargs='*')
+        elif _type == List[float]:
+            parser.add_argument(f'--{arg.name}', type=float, required=arg.default is None, default=arg.default, nargs='*')
+        elif _type == List[str]:
+            parser.add_argument(f'--{arg.name}', type=str, required=arg.default is None, default=arg.default, nargs='*')
+        elif _type in (str, int, float):
+            parser.add_argument(f'--{arg.name}', type=_type, required=arg.default is None, default=arg.default)
+        elif _type == bool:
+            parser.add_argument(f'--{arg.name}', type=_type, required=arg.default is None, default=arg.default, action=argparse.BooleanOptionalAction)
+        else:
+            raise NotImplementedError('Argument type not supported: {}'.format(_type))
     args = parser.parse_args()
 
     logger = WandbLogger(
@@ -80,8 +93,13 @@ if __name__ == '__main__':
         validation_dataset,
         **DATALOADER_CONFIG,
     )
-    mlp_config = MLPConfig(num_heroes=138, layers=[32, 16])
-    wrapper_config = ModelWrapperConfig(symmetric=read_config(Arguments.MODEL_SYMMETRIC))
+    mlp_config = MLPConfig(
+        num_heroes=read_config(Arguments.MODEL_NUM_HEROES),
+        layers=read_config(Arguments.MODEL_LAYERS),
+    )
+    wrapper_config = ModelWrapperConfig(
+        symmetric=read_config(Arguments.MODEL_SYMMETRIC),
+    )
     module = MLP(mlp_config)
     model = ModelWrapper(config=wrapper_config, module=module)
 
@@ -95,7 +113,15 @@ if __name__ == '__main__':
             dirpath=checkpoint_path,
             filename='chkpt-{epoch:02d}-{val_loss:.2f}',
         ),
-        LogOutputHistogram(output_key='predictions', bins=10, range=(0, 1)),
+        OutputLoggerCallback(
+            output_key='predictions',
+            on_validation_batch_end=True,
+            bins=10,
+            range=(0, 1),
+        ),
+        WeightLoggerCallback(
+            on_train_end=True,
+        ),
     ]
     trainer = pl.Trainer(
         # gpus=1,

@@ -1,3 +1,4 @@
+"""Module containing the MLP module and its config."""
 from typing import Tuple
 
 from attrs import define

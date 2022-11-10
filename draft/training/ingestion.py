@@ -1,3 +1,4 @@
+"""Module that defines the classes to load and use training data."""
 from typing import Optional
 
 import re

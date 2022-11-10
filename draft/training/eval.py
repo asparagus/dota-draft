@@ -1,3 +1,4 @@
+"""Module for using a pretrained model to run eval on one example."""
 from typing import Dict
 
 import argparse
@@ -42,7 +43,7 @@ if __name__ == '__main__':
         config = yaml.safe_load(f)
     mlp_config = MLPConfig(
         num_heroes=read_config(Arguments.MODEL_NUM_HEROES, config=config),
-        layers=[32, 16],
+        layers=read_config(Arguments.MODEL_LAYERS, config=config),
     )
     wrapper_config = ModelWrapperConfig(
         symmetric=read_config(Arguments.MODEL_SYMMETRIC, config=config),
