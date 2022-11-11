@@ -2,7 +2,7 @@
 
 Example run:
 ```
-python -m draft.training.trainer --data.path=data/training/20221102
+python -m draft.training.train --data.path=data/training/20221102
 ```
 """
 from typing import List
