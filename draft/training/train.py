@@ -5,10 +5,9 @@ Example run:
 python -m draft.training.train --data.path=data/training/20221102
 ```
 """
-from typing import List
+from typing import List, Optional
 import argparse
 import os
-import yaml
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -21,7 +20,7 @@ from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
 from draft.model.mlp import MLP, MLPConfig
 from draft.model.wrapper import ModelWrapper, ModelWrapperConfig
 from draft.providers import GCS, WANDB
-from draft.training.argument import Argument, Arguments, read_config
+from draft.training.argument import Arguments, read_config
 from draft.training.callbacks import OutputLoggerCallback, WeightLoggerCallback
 from draft.training.ingestion import MatchDataset
 
@@ -33,34 +32,14 @@ ConfigArguments = [
 ]
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train the model.')
-    parser.add_argument('--run_name', default=None, help='Name for the run')
-    for arg in ConfigArguments:
-        _type = arg.type
-        if _type == List[int]:
-            parser.add_argument(f'--{arg.name}', type=int, required=arg.default is None, default=arg.default, nargs='*')
-        elif _type == List[float]:
-            parser.add_argument(f'--{arg.name}', type=float, required=arg.default is None, default=arg.default, nargs='*')
-        elif _type == List[str]:
-            parser.add_argument(f'--{arg.name}', type=str, required=arg.default is None, default=arg.default, nargs='*')
-        elif _type in (str, int, float):
-            parser.add_argument(f'--{arg.name}', type=_type, required=arg.default is None, default=arg.default)
-        elif _type == bool:
-            parser.add_argument(f'--{arg.name}', type=_type, required=arg.default is None, default=arg.default, action=argparse.BooleanOptionalAction)
-        else:
-            raise NotImplementedError('Argument type not supported: {}'.format(_type))
-    args = parser.parse_args()
-
-    logger = WandbLogger(
+def create_logger(run_name: Optional[str] = None):
+    return WandbLogger(
         project=WANDB.project,
-        name=args.run_name,
+        name=run_name,
     )
-    varargs = {k: v for k, v in vars(args).items() if v is not None}
-    print('Command line overrides:')
-    print(yaml.dump(varargs))
-    wandb.run.config.update(varargs)
 
+
+def train(logger: WandbLogger):
     torch.manual_seed(read_config(Arguments.REPRODUCIBILITY_SEED))
     DATASET_CONFIG = {
         'bucket_name': GCS.bucket,
@@ -99,6 +78,8 @@ if __name__ == '__main__':
     )
     wrapper_config = ModelWrapperConfig(
         symmetric=read_config(Arguments.MODEL_SYMMETRIC),
+        learning_rate=read_config(Arguments.MODEL_LEARNING_RATE),
+        weight_decay=read_config(Arguments.MODEL_WEIGHT_DECAY),
     )
     module = MLP(mlp_config)
     model = ModelWrapper(config=wrapper_config, module=module)
@@ -138,3 +119,31 @@ if __name__ == '__main__':
         validation_loader,
     )
     wandb.save(os.path.join(checkpoint_path, '*.ckpt'), base_path=wandb.run.dir)
+
+
+def main(**kwargs):
+    logger = create_logger()
+    wandb.run.config.update(kwargs)
+    train(logger)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Train the model.')
+    parser.add_argument('--run_name', default=None, help='Name for the run')
+    for arg in ConfigArguments:
+        _type = arg.type
+        if _type == List[int]:
+            parser.add_argument(f'--{arg.name}', type=int, required=arg.default is None, default=arg.default, nargs='*')
+        elif _type == List[float]:
+            parser.add_argument(f'--{arg.name}', type=float, required=arg.default is None, default=arg.default, nargs='*')
+        elif _type == List[str]:
+            parser.add_argument(f'--{arg.name}', type=str, required=arg.default is None, default=arg.default, nargs='*')
+        elif _type in (str, int, float):
+            parser.add_argument(f'--{arg.name}', type=_type, required=arg.default is None, default=arg.default)
+        elif _type == bool:
+            parser.add_argument(f'--{arg.name}', type=_type, required=arg.default is None, default=arg.default, action=argparse.BooleanOptionalAction)
+        else:
+            raise NotImplementedError('Argument type not supported: {}'.format(_type))
+    args = parser.parse_args()
+    kwargs = {k: v for k, v in vars(args).items() if v is not None}
+    main(**kwargs)
