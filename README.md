@@ -14,6 +14,7 @@ ML Application for drafting heroes in the Dota 2 game.
 - [Google Cloud Scheduler](https://cloud.google.com/scheduler)
 - [Google Cloud Dataflow](https://cloud.google.com/dataflow) / [Apache Beam](https://beam.apache.org/)
 - [Google Cloud AI Platform](https://cloud.google.com/ai-platform/docs/technical-overview)
+- [Weights and Biases](https://wandb.ai/site)
 
 ## Workflow Summary
 
