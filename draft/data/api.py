@@ -29,10 +29,11 @@ class Api(object):
         """Initialize the Api object with a given api_key.
 
         Args:
-            api_key: The key to the opendota api. If omitted, the DOTA_API_KEY
-                environment variable will be used.
+            api_key: The key to the opendota api.
+                If omitted, the api key draft/configs/opendota.yaml will be used.
+                If not available, the DOTA_API_KEY environment variable will be used.
         """
-        self.api_key = api_key or OPENDOTA.api_key
+        self.api_key = api_key or OPENDOTA.api_key or os.getenv('DOTA_API_KEY')
         if self.api_key is None:
             logging.warning('OpenDota api_key not set')
 
