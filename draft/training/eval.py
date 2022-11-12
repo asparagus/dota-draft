@@ -60,29 +60,41 @@ if __name__ == '__main__':
     ## Validate
     model.eval()
 
-    heroes = [
-        # Radiant team
-        'Tiny',
-        'Mirana',
-        'Pangolier',
-        'Beastmaster',
-        'Medusa',
-        # Dire team
-        'Marci',
-        'Leshrac',
-        'Silencer',
-        'Naga Siren',
-        'Ember Spirit',
+    matches = [
+        # TI11 Grand Finals
+        [
+            # Radiant
+            'Tusk', 'Mirana', 'Hoodwink', 'Naga Siren', 'Tidehunter',
+            # Dire
+            'Leshrac', 'Tiny', 'Enigma', 'Lich', 'Pudge',
+        ],
+        [
+            # Radiant
+            'Marci', 'Visage', 'Chaos Knight', 'Phoenix', 'Arc Warden',
+            # Dire
+            'Leshrac', 'Tusk', 'Chen', 'Bristleback', 'Morphling',
+        ],
+        [
+            # Radiant team
+            'Tiny', 'Mirana', 'Pangolier', 'Beastmaster', 'Medusa',
+            # Dire team
+            'Marci', 'Leshrac', 'Silencer', 'Naga Siren', 'Ember Spirit',
+        ],
     ]
 
     # Radiant team is better than dire, they should output a high probability
-    hero_ids = [hero_from_name[hero_name]._id for hero_name in heroes]
-    draft = torch.tensor([hero_ids], dtype=torch.long)
-    print('Radiant:')
-    for hero in heroes[:5]:
-        print('- {hero}'.format(hero=hero))
-    print('Dire:')
-    for hero in heroes[5:]:
-        print('- {hero}'.format(hero=hero))
-    print('Odds:')
-    print(model(draft).detach())
+    match_hero_ids = [
+        [hero_from_name[hero_name]._id for hero_name in match]
+        for match in matches
+    ]
+    draft = torch.tensor(match_hero_ids, dtype=torch.long)
+    results = model(draft).detach().numpy()
+    for match, result in zip(matches, results):
+        print('Radiant:')
+        for hero in match[:5]:
+            print('- {hero}'.format(hero=hero))
+        print('Dire:')
+        for hero in match[5:]:
+            print('- {hero}'.format(hero=hero))
+        print('Odds:')
+        print(result)

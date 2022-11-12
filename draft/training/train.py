@@ -33,6 +33,11 @@ ConfigArguments = [
 
 
 def create_logger(run_name: Optional[str] = None):
+    """Create a logger (and initialize the run).
+
+    Args:
+        run_name: (Optional) Recognizable name to use for the run
+    """
     return WandbLogger(
         project=WANDB.project,
         name=run_name,
@@ -40,6 +45,7 @@ def create_logger(run_name: Optional[str] = None):
 
 
 def train(logger: WandbLogger):
+    """Run training with an initialized logger."""
     torch.manual_seed(read_config(Arguments.REPRODUCIBILITY_SEED))
     DATASET_CONFIG = {
         'bucket_name': GCS.bucket,
@@ -122,6 +128,11 @@ def train(logger: WandbLogger):
 
 
 def main(**kwargs):
+    """Run training, use kwargs to update wandb config.
+
+    Args:
+        **kwargs: Keyword arguments for the wandb config
+    """
     logger = create_logger()
     wandb.run.config.update(kwargs)
     train(logger)
