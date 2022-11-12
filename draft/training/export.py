@@ -44,4 +44,4 @@ if __name__ == '__main__':
     model_ckpt = ckpt['state_dict']
     model.load_state_dict(model_ckpt)
     model_args = torch.ones((1, 10)).int()
-    torch.onnx.export(model, model_args, args.output)
+    torch.onnx.export(model.to_torchscript(), model_args, args.output)
