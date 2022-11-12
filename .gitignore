@@ -16,6 +16,7 @@ lightning_logs
 wandb
 *.pth
 **/checkpoints/**
+*.onnx
 
 # Credentials
 dota-draft-*.json

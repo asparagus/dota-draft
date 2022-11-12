@@ -29,8 +29,10 @@ class ModelWrapper(pl.LightningModule):
             module: The module that does the learning
         """
         super().__init__()
-        self.config = config
         self.module = module
+        self.symmetric = config.symmetric
+        self.learning_rate = config.learning_rate
+        self.weight_decay = config.weight_decay
         if config.symmetric:
             self.train_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
             self.val_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
@@ -41,8 +43,6 @@ class ModelWrapper(pl.LightningModule):
             self.val_accuracy = torchmetrics.classification.BinaryAccuracy()
             self.loss_fn = nn.functional.binary_cross_entropy
             self.activation_fn = nn.Sigmoid()
-        self.learning_rate = self.config.learning_rate
-        self.weight_decay = self.config.weight_decay
 
     def preprocess_input(self, x: torch.Tensor):
         """Preprocessing function for the inputs.
@@ -58,7 +58,7 @@ class ModelWrapper(pl.LightningModule):
         Args:
             y: (batch_size, 1) vector with the results of each match
         """
-        if self.config.symmetric:
+        if self.symmetric:
             return y.byte()
         return y.float().unsqueeze(1)
 
@@ -89,7 +89,7 @@ class ModelWrapper(pl.LightningModule):
         processed = self.preprocess_input(x)
         logits = self.module(processed)
 
-        if self.config.symmetric:
+        if self.symmetric:
             flipped = self.flip(x)
             flipped_processed = self.preprocess_input(flipped)
             flipped_logits = self.module(flipped_processed)
