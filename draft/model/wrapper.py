@@ -32,11 +32,13 @@ class ModelWrapper(pl.LightningModule):
         self.config = config
         self.module = module
         if config.symmetric:
-            self.accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
+            self.train_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
+            self.val_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
             self.loss_fn = nn.functional.cross_entropy
             self.activation_fn = nn.Softmax(dim=1)
         else:
-            self.accuracy = torchmetrics.classification.BinaryAccuracy()
+            self.train_accuracy = torchmetrics.classification.BinaryAccuracy()
+            self.val_accuracy = torchmetrics.classification.BinaryAccuracy()
             self.loss_fn = nn.functional.binary_cross_entropy
             self.activation_fn = nn.Sigmoid()
         self.learning_rate = self.config.learning_rate
@@ -107,10 +109,10 @@ class ModelWrapper(pl.LightningModule):
         y = self.preprocess_label(y)
         out = self.forward(x)
         loss = self.loss_fn(out, y)
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, on_epoch=True, on_step=False)
 
-        self.accuracy(out, y)
-        self.log('train_acc', self.accuracy)
+        self.train_accuracy(out, y)
+        self.log('train_acc', self.train_accuracy, on_epoch=True, on_step=False)
         return loss
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int):
@@ -125,10 +127,10 @@ class ModelWrapper(pl.LightningModule):
         y = self.preprocess_label(y)
         out = self.forward(x)
         loss = self.loss_fn(out, y)
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, on_epoch=True, on_step=False)
 
-        self.accuracy(out, y)
-        self.log('val_acc', self.accuracy)
+        self.val_accuracy(out, y)
+        self.log('val_acc', self.val_accuracy, on_epoch=True, on_step=False)
         return {'loss': loss, 'predictions': out}
 
     def configure_optimizers(self):
