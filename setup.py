@@ -8,13 +8,26 @@ DOTA_DRAFT = 'dota-draft'
 # See environments/README.md
 environment = os.getenv('ENVIRONMENT') or DOTA_DRAFT
 
+# WORKDIR is set by the Docker images, otherwise use current setup.
+workdir = os.getenv('WORKDIR') or os.getcwd()
+
 # Read from requirements.txt for consistency
-requirements_path = os.path.join('environments', environment, 'requirements.txt')
+dirs = ','.join(os.listdir('.'))
+environments_dir = os.path.join(workdir, 'environments')
+requirements_dir = os.path.join(environments_dir, environment)
+requirements_path = os.path.join(requirements_dir, 'requirements.txt')
+if not os.path.exists(environments_dir):
+    raise RuntimeError(f'No environments folder within {workdir} with dirs ({dirs})')
+if not os.path.exists(requirements_dir):
+    raise RuntimeError(f'Could not find the environment {environment} within {workdir} with dirs ({dirs})')
+if not os.path.exists(requirements_path):
+    raise RuntimeError(f'Could not find the requirements file at {requirements_path} within {workdir} with dirs ({dirs})')
+
 try:
     with open(requirements_path) as f:
         requirements = f.read().splitlines()
 except FileNotFoundError:
-    raise ValueError(f'Invalid environment {environment}, could not install dependencies.')
+    raise RuntimeError(f'Invalid environment {environment}, could not install dependencies.')
 
 
 PACKAGE_DICT = {

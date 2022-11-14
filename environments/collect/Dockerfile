@@ -8,6 +8,7 @@ COPY ./draft ./draft
 COPY ./environments ./environments
 COPY ./*.py ./
 
+ENV WORKDIR=/app
 ENV ENVIRONMENT=collect
 ENV PIP_ROOT_USER_ACTION=ignore
 RUN pip install --upgrade pip

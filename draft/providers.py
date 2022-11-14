@@ -16,6 +16,13 @@ def yaml_load(path: str):
     with open(path, 'r') as f:
         return yaml.safe_load(f)
 
+@define
+class Gar:
+    """Configuration used for Google Artifact Registry."""
+    location: str
+    project: str
+    repository: str
+
 
 @define
 class Gcs:
@@ -36,6 +43,7 @@ class OpenDota:
     api_key: Optional[str]
 
 
+GAR = Gar(**yaml_load('draft/configs/gar.yaml'))
 GCS = Gcs(**yaml_load('draft/configs/gcs.yaml'))
 OPENDOTA = OpenDota(**yaml_load('draft/configs/opendota.yaml'))
 WANDB = Wandb(**yaml_load('draft/configs/wandb.yaml'))

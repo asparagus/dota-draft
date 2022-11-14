@@ -7,6 +7,9 @@ This information should be private and so after setting it up, make sure to tell
 git update-index --skip-worktree draft/configs/*.yaml
 ```
 
+### GAR config:
+Requires your GAR `location`, `project` and `repository`.
+
 ### GCS config:
 Requires your GCS `bucket` and `project`.
 
