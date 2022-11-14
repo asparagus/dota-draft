@@ -7,7 +7,9 @@ python -m draft.data.compact \
     --output gs://<BUCKET>/data/training/<DATE> \
     --project <PROJECT> \
     --temp_location gs://<BUCKET>/tmp \
-    --setup_file ./setup.py
+    --setup_file ./setup.py \
+    --experiments=use_runner_v2 \
+    --sdk_container_image=<LOCATION>-docker.pkg.dev/<PROJECT>/<REPOSITORY>/compact:latest
 
 """
 import argparse
