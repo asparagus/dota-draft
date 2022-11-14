@@ -1,12 +1,12 @@
 """Module that defines the classes to load and use training data."""
 from typing import Optional
 
-import re
-import tempfile
+import glob
+import os
 
 import numpy as np
-import google.cloud.storage as gcs
 import torch.utils.data
+import wandb
 
 from draft.data.match import Match, Matches
 from draft.data.filter import MatchFilter, HighRankMatchFilter, ValidMatchFilter
@@ -17,22 +17,19 @@ class MatchDataset(torch.utils.data.IterableDataset):
 
     def __init__(
             self,
-            bucket_name: str,
-            prefix: str,
-            blob_regex: Optional[str] = None,
+            local_dir: str,
+            glob: Optional[str] = '*.txt',
             match_filter: Optional[MatchFilter] = None,
         ):
         """Initialize the dataset from cloud storage.
 
         Args:
-            bucket_name: The name of the GCS bucket to get the data from
-            prefix: The prefix of files to get
-            blob_regex: (Optional) Files that do not match this regex are discarded
+            local_dir: Local directory where this dataset is downloaded
+            glob: (Optional) Files that do not match this regex are discarded
             match_filter: (Optional) Matches that do not pass this filter are discarded
         """
-        self.bucket_name = bucket_name
-        self.prefix = prefix
-        self.blob_regex = re.compile(blob_regex) if blob_regex else None
+        self.local_dir = local_dir
+        self.glob = glob
         self.match_filter = match_filter
 
     @classmethod
@@ -73,24 +70,17 @@ class MatchDataset(torch.utils.data.IterableDataset):
         and return an iterator for tuples of data, label.
         """
         worker_info = torch.utils.data.get_worker_info()
-        storage_client = gcs.Client()
-        bucket = storage_client.bucket(self.bucket_name)
-        blobs = bucket.list_blobs(prefix=self.prefix)
+        files = glob.glob(os.path.join(self.local_dir, self.glob))
 
-        if self.blob_regex is not None:
-            blobs = filter(lambda blob: self.blob_regex.search(blob.name), blobs)
-
-        if worker_info is not None:  # multi-process data loading, use every n-th blob
-            blobs = (
-                blob
-                for i, blob in enumerate(blobs)
+        if worker_info is not None:  # multi-process data loading, use every n-th file
+            files = (
+                file
+                for i, file in enumerate(files)
                 if i % worker_info.num_workers == worker_info.id
             )
 
-        for blob in blobs:
-            temp = tempfile.NamedTemporaryFile(mode='w')
-            blob.download_to_filename(temp.name)
-            matches = self.matches_from_file(temp.name)
+        for file in files:
+            matches = self.matches_from_file(file)
             if self.match_filter is not None:
                 matches = filter(self.match_filter, matches)
             for match in matches:
@@ -99,11 +89,12 @@ class MatchDataset(torch.utils.data.IterableDataset):
 
 # This code can be used to try this out.
 if __name__ == '__main__':
-    from draft.providers import GCS
+    run = wandb.init(name='ingestion-test')
+    artifact = run.use_artifact('asparagus/dota-draft/matches:v0', type='dataset')
+    artifact_dir = artifact.download()
     dataset = MatchDataset(
-        bucket_name=GCS.bucket,
-        prefix='data/training/',
-        blob_regex='.*.txt',
+        local_dir=artifact_dir,
+        glob='train*',
         match_filter=ValidMatchFilter() & HighRankMatchFilter(60),
     )
     batch_size = 128

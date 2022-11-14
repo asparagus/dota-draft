@@ -2,11 +2,12 @@
 
 Example run:
 ```
-python -m draft.training.train --data.path=data/training/20221102
+python -m draft.training.train --data.artifact_id=asparagus/dota-draft/matches:v0
 ```
 """
 from typing import List, Optional
 import argparse
+import copy
 import os
 
 import pytorch_lightning as pl
@@ -19,7 +20,7 @@ import wandb
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
 from draft.model.mlp import MLP, MLPConfig
 from draft.model.wrapper import ModelWrapper, ModelWrapperConfig
-from draft.providers import GCS, WANDB
+from draft.providers import WANDB
 from draft.training.argument import Arguments, read_config
 from draft.training.callbacks import OutputLoggerCallback, WeightLoggerCallback
 from draft.training.ingestion import MatchDataset
@@ -44,12 +45,55 @@ def create_logger(run_name: Optional[str] = None):
     )
 
 
+def export(
+        model: ModelWrapperConfig,
+        checkpoint_dir: str,
+        checkpoint: str,
+    ) -> wandb.Artifact:
+    """Export a model checkpoint and return the wandb artifact.
+
+    The artifact contains both the exported model and original checkpoint.
+
+    Args:
+        model: The model to export
+        checkpoint_dir: The directory where the checkpoints are stored
+        checkpoint: The name of the checkpoint to load before exporting
+    """
+    ckpt_path = os.path.join(checkpoint_dir, checkpoint)
+    artifact = wandb.Artifact('model', type='model')
+    artifact.add_file(
+        local_path=ckpt_path,
+        name='model.ckpt',
+    )
+
+    onnx_path = ckpt_path.replace('.ckpt', '.onnx')
+    ckpt_state = torch.load(ckpt_path)['state_dict']
+    model_copy = copy.deepcopy(model)
+    model_copy.load_state_dict(ckpt_state)
+    model_args = torch.ones((1, 10)).int()
+    torch.onnx.export(
+        model_copy.to_torchscript(),
+        model_args,
+        onnx_path,
+    )
+
+    artifact.add_file(
+        local_path=onnx_path,
+        name='model.onnx',
+    )
+    return artifact
+
+
 def train(logger: WandbLogger):
     """Run training with an initialized logger."""
     torch.manual_seed(read_config(Arguments.REPRODUCIBILITY_SEED))
+    artifact = wandb.run.use_artifact(
+        read_config(Arguments.DATA_ARTIFACT_ID),
+        type='dataset',
+    )
+    artifact_dir = artifact.download()
     DATASET_CONFIG = {
-        'bucket_name': GCS.bucket,
-        'prefix': read_config(Arguments.DATA_PATH),
+        'local_dir': artifact_dir,
         'match_filter': (
             ValidMatchFilter() &
             HighRankMatchFilter(30)
@@ -64,11 +108,11 @@ def train(logger: WandbLogger):
 
     training_dataset = MatchDataset(
         **DATASET_CONFIG,
-        blob_regex='train.*.txt',
+        glob='train*',
     )
     validation_dataset = MatchDataset(
         **DATASET_CONFIG,
-        blob_regex='val.*.txt',
+        glob='val*',
     )
     train_loader = torch.utils.data.DataLoader(
         training_dataset,
@@ -124,7 +168,13 @@ def train(logger: WandbLogger):
         train_loader,
         validation_loader,
     )
-    wandb.save(os.path.join(checkpoint_path, '*.ckpt'), base_path=wandb.run.dir)
+
+    # Log the trained model
+    checkpoints = os.listdir(checkpoint_path)
+    for ckpt in checkpoints:
+        wandb.run.log_artifact(
+            export(model, checkpoint_path, ckpt)
+        )
 
 
 def main(**kwargs):

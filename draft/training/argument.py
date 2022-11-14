@@ -14,7 +14,7 @@ class Argument:
 
 class Arguments:
     """This class just holds the arguments that can be used and assigns a name to them."""
-    DATA_PATH = Argument('data.path', str, default=None)
+    DATA_ARTIFACT_ID = Argument('data.artifact_id', str, default=None)
     DATA_BATCH_SIZE = Argument('data.batch_size', int, default=256)
     REPRODUCIBILITY_SEED = Argument('reproducibility.seed', int, default=1)
     MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=138)

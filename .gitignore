@@ -19,6 +19,7 @@ wandb
 *.pth
 **/checkpoints/**
 *.onnx
+artifacts
 
 # Credentials
 dota-draft-*.json
