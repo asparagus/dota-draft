@@ -1,15 +1,8 @@
 """Apache Beam pipeline for compacting a dataset for training.
 
 python -m draft.data.compact \
-    --runner DataflowRunner \
-    --region us-west2 \
-    --input gs://<BUCKET>/data/matches/<PATTERN>.json \
-    --output gs://<BUCKET>/data/training/<DATE> \
-    --project <PROJECT> \
-    --temp_location gs://<BUCKET>/tmp \
-    --setup_file ./setup.py \
-    --experiments=use_runner_v2 \
-    --sdk_container_image=<LOCATION>-docker.pkg.dev/<PROJECT>/<REPOSITORY>/compact:latest
+    --input data/matches/<PATTERN>.json \
+    --output data/training/<DATE>
 
 """
 import argparse
@@ -27,7 +20,7 @@ from apache_beam.options.pipeline_options import SetupOptions
 
 from draft.data.match import Match
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
-from draft.providers import WANDB
+from draft.providers import GAR, GCS, WANDB
 
 
 class MatchSplitter(beam.DoFn):
@@ -85,17 +78,14 @@ def run(argv=None, save_main_session=True):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--input',
-        dest='input',
         required=True,
         help='Cloud storage glob of files to process.')
     parser.add_argument(
         '--output',
-        dest='output',
         required=True,
         help='Output location for the processed files.')
     parser.add_argument(
         '--minimum_rank',
-        dest='minimum_rank',
         type=int,
         required=False,
         default=60,
@@ -104,11 +94,20 @@ def run(argv=None, save_main_session=True):
     parser.add_argument('--no-split', dest='split', action='store_false')
     parser.set_defaults(split=True)
 
-    known_args, pipeline_args = parser.parse_known_args(argv)
+    known_args = parser.parse_args(argv)
+    input_path = os.path.join(f'gs://{GCS.bucket}', known_args.input)
+    output_path = os.path.join(f'gs://{GCS.bucket}', known_args.output)
 
     # We use the save_main_session option because one or more DoFn's in this
     # workflow rely on global context (e.g., a module imported at module level).
-    pipeline_options = PipelineOptions(pipeline_args)
+    pipeline_options = PipelineOptions(
+        [],
+        runner='DataflowRunner',
+        region=GAR.location,
+        temp_location=f'gs://{GCS.bucket}/tmp',
+        experiments='use_runner_v2',
+        sdk_container_image=f'{GAR.location}-docker.pkg.dev/{GAR.project}/{GAR.repository}/compact:latest',
+    )
     pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
 
     # Start a WANDB run to log this dataset
@@ -120,7 +119,7 @@ def run(argv=None, save_main_session=True):
 
         matches = (
             p
-            | 'Read' >> ReadFromText(known_args.input)
+            | 'Read' >> ReadFromText(input_path)
             | 'Splitter' >> beam.ParDo(MatchSplitter())
             | 'Parse' >> beam.Map(Match.loads)
             | 'Filter valid' >> beam.Filter(ValidMatchFilter())
@@ -134,12 +133,12 @@ def run(argv=None, save_main_session=True):
             partition_names = splitter.partition_names
             partitions = matches | 'Partition' >> beam.Partition(splitter.partition, len(partition_names))
             partition_output_paths = [
-                os.path.join(known_args.output, partition_name)
+                os.path.join(output_path, partition_name)
                 for partition_name in partition_names
             ]
             partitions_and_outputs = zip(partitions, partition_names, partition_output_paths)
         else:
-            partitions_and_outputs = [(matches, '', known_args.output)]
+            partitions_and_outputs = [(matches, '', output_path)]
 
         for partition, name, output in partitions_and_outputs:
             (partition
@@ -148,7 +147,7 @@ def run(argv=None, save_main_session=True):
 
     # Log the generated dataset
     artifact = wandb.Artifact('matches', type='dataset')
-    artifact.add_reference(known_args.output)
+    artifact.add_reference(output_path)
     run.log_artifact(artifact)
 
 
