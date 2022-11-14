@@ -14,16 +14,18 @@ gcloud functions deploy collect \
     --project=<PROJECT_NAME> \
     --source=. \
     --ingress-settings=all \
-    --set-env-vars=<DOTA_API_KEY>
+    --ignore-file=.gitignore \
+    --build-env-vars-file=environments/collect/env.yaml
 
 Check additional documentation at https://cloud.google.com/sdk/gcloud/reference/functions/deploy.
 """
 import functions_framework
 
 from draft.data import collect as coll
+from draft.providers import GCS
 
 
 @functions_framework.http
 def collect(request):
-    num_matches = coll.run(start_id=None, bucket_name='dota-draft', storage_path='data/matches')
+    num_matches = coll.run(start_id=None, bucket_name=GCS.bucket, storage_path='data/matches')
     return 'Collected data from {} matches.'.format(num_matches)

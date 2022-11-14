@@ -16,6 +16,7 @@ import logging
 import os
 
 import numpy as np
+import wandb
 import apache_beam as beam
 from apache_beam.io import ReadFromText
 from apache_beam.io import WriteToText
@@ -24,6 +25,7 @@ from apache_beam.options.pipeline_options import SetupOptions
 
 from draft.data.match import Match
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
+from draft.providers import WANDB
 
 
 class MatchSplitter(beam.DoFn):
@@ -107,6 +109,10 @@ def run(argv=None, save_main_session=True):
     pipeline_options = PipelineOptions(pipeline_args)
     pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
 
+    # Start a WANDB run to log this dataset
+    run = wandb.init(project=WANDB.project)
+    run.config.update(vars(known_args))
+
     # The pipeline will be run on exiting the with block.
     with beam.Pipeline(options=pipeline_options) as p:
 
@@ -137,6 +143,11 @@ def run(argv=None, save_main_session=True):
             (partition
                 | 'Serialize {}'.format(name) >> beam.Map(Match.dumps)
                 | 'Write {}'.format(name) >> WriteToText(output, file_name_suffix='.txt'))
+
+    # Log the generated dataset
+    artifact = wandb.Artifact('matches', type='dataset')
+    artifact.add_reference(known_args.output)
+    run.log_artifact(artifact)
 
 
 if __name__ == '__main__':

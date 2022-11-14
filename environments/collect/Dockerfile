@@ -1,0 +1,14 @@
+FROM continuumio/miniconda3
+RUN conda update conda
+RUN conda install -y pip
+
+WORKDIR /app
+
+COPY ./draft ./draft
+COPY ./environments ./environments
+COPY ./*.py ./
+
+ENV ENVIRONMENT=collect
+ENV PIP_ROOT_USER_ACTION=ignore
+RUN pip install --upgrade pip
+RUN pip install .

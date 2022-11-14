@@ -5,8 +5,6 @@ import json
 import logging
 import os
 
-from draft.data import api
-
 if TYPE_CHECKING:
     import google.cloud.storage as gcs
     import google.cloud.storage.bucket as gcs_bucket
