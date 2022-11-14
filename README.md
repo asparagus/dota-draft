@@ -31,6 +31,7 @@ ML Application for drafting heroes in the Dota 2 game.
 
 ### Configs
 In order for the project to work as intended, you'll need to set up the following files:
+- `draft/configs/gar.yaml`
 - `draft/configs/gcs.yaml`
 - `draft/configs/opendota.yaml`
 - `draft/configs/wandb.yaml`
