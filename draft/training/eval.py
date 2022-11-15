@@ -1,4 +1,10 @@
-"""Module for using a pretrained model to run eval on one example."""
+"""Module for using a pretrained model to run eval on one example.
+
+Example run:
+```
+python -m draft.training.eval asparagus/dota-draft/model:v12
+```
+"""
 from typing import Dict
 
 import argparse
