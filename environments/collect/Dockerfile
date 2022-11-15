@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM continuumio/miniconda3
 RUN conda update conda
 RUN conda install -y pip

@@ -10,7 +10,7 @@ COPY ./environments ./environments
 COPY ./*.py ./
 
 ENV WORKDIR=/app
-ENV ENVIRONMENT=compact
+ENV ENVIRONMENT=dota-draft
 ENV PIP_ROOT_USER_ACTION=ignore
 RUN pip install --upgrade pip
 RUN pip install .

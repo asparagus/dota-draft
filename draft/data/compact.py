@@ -107,7 +107,7 @@ def run(argv=None, save_main_session=True):
         region=GAR.location,
         temp_location=f'gs://{GCS.bucket}/tmp',
         experiments=['use_runner_v2'],
-        sdk_container_image=f'{GAR.location}-docker.pkg.dev/{GAR.project}/{GAR.repository}/compact:latest',
+        sdk_container_image=f'{GAR.location}-docker.pkg.dev/{GAR.project}/{GAR.repository}/compact-worker:latest',
     )
     pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
 

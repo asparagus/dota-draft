@@ -7,6 +7,10 @@ from draft.providers import GAR
 ENVIRONMENTS = [
     'collect',
     'compact',
+    'compact-worker',
+    'dota-draft',
+    'eval',
+    'train',
 ]
 
 

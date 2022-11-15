@@ -1,6 +1,7 @@
 """Module with parsed configurations to the service providers used in this project."""
 from attrs import define
 from typing import Optional
+import os
 import yaml
 
 
@@ -43,7 +44,9 @@ class OpenDota:
     api_key: Optional[str]
 
 
-GAR = Gar(**yaml_load('draft/configs/gar.yaml'))
-GCS = Gcs(**yaml_load('draft/configs/gcs.yaml'))
-OPENDOTA = OpenDota(**yaml_load('draft/configs/opendota.yaml'))
-WANDB = Wandb(**yaml_load('draft/configs/wandb.yaml'))
+PACKAGE_ROOT = os.path.dirname(os.path.realpath(__file__))
+
+GAR = Gar(**yaml_load(os.path.join(PACKAGE_ROOT, 'configs/gar.yaml')))
+GCS = Gcs(**yaml_load(os.path.join(PACKAGE_ROOT, 'configs/gcs.yaml')))
+OPENDOTA = OpenDota(**yaml_load(os.path.join(PACKAGE_ROOT, 'configs/opendota.yaml')))
+WANDB = Wandb(**yaml_load(os.path.join(PACKAGE_ROOT, 'configs/wandb.yaml')))

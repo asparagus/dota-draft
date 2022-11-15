@@ -1,7 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM continuumio/miniconda3
-RUN conda update conda
-RUN conda install -y pip
+FROM apache/beam_python3.9_sdk:2.42.0
 
 WORKDIR /app
 

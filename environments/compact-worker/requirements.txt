@@ -1,0 +1,5 @@
+apache_beam[gcp]==2.42.0
+attrs==22.1.0
+numpy==1.22.4
+wandb[gcp]==0.13.5
+PyYAML==6.0
