@@ -2,21 +2,19 @@
 from typing import Dict
 
 import argparse
-import os
 
-import torch
+import numpy as np
+import onnxruntime as ort
 import wandb
-import yaml
 
 from draft.data.api import Api
 from draft.data.hero import Hero
-from draft.model.mlp import MLP, MLPConfig
-from draft.model.wrapper import ModelWrapper, ModelWrapperConfig
-from draft.training.argument import Arguments, read_config
 
 
 CONFIG_FILE = 'config.yaml'
 ROOT_DIR = '/tmp'
+
+INPUT_NAME = 'processed.1'
 
 
 def BuildHeroMap() -> Dict[str, Hero]:
@@ -30,35 +28,15 @@ def BuildHeroMap() -> Dict[str, Hero]:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate the model to predict the winning team.')
-    parser.add_argument('--checkpoint', required=True, help='Name of the saved checkpoint')
-    parser.add_argument('--run_path', required=True, help='Path to the saved run')
+    parser.add_argument('model_artifact_id', help='Artifact id for the saved model')
     args = parser.parse_args()
     hero_from_name = BuildHeroMap()
 
-    ## Define & Load
-    root_dir = os.path.join(ROOT_DIR, args.run_path)
-    ckpt_file = wandb.restore(args.checkpoint, run_path=args.run_path, root=root_dir)
-    config_file = wandb.restore(CONFIG_FILE, run_path=args.run_path, root=root_dir)
-    with open(config_file.name, 'r') as f:
-        config = yaml.safe_load(f)
-    mlp_config = MLPConfig(
-        num_heroes=read_config(Arguments.MODEL_NUM_HEROES, config=config),
-        layers=read_config(Arguments.MODEL_LAYERS, config=config),
-    )
-    wrapper_config = ModelWrapperConfig(
-        symmetric=read_config(Arguments.MODEL_SYMMETRIC, config=config),
-    )
-    module = MLP(mlp_config)
-    model = ModelWrapper(
-        config=wrapper_config,
-        module=module,
-    )
-    ckpt = torch.load(ckpt_file.name)
-    model_ckpt = ckpt['state_dict']
-    model.load_state_dict(model_ckpt)
-
-    ## Validate
-    model.eval()
+    ## Retrieve the onnx model
+    wandb_api = wandb.Api()
+    artifact = wandb_api.artifact(args.model_artifact_id)
+    onnx_path = artifact.get_path('model.onnx').download()
+    ort_session = ort.InferenceSession(onnx_path)
 
     matches = [
         # TI11 Grand Finals
@@ -84,11 +62,13 @@ if __name__ == '__main__':
 
     # Radiant team is better than dire, they should output a high probability
     match_hero_ids = [
-        [hero_from_name[hero_name]._id for hero_name in match]
+        np.array([hero_from_name[hero_name]._id for hero_name in match]).astype(np.int32)
         for match in matches
     ]
-    draft = torch.tensor(match_hero_ids, dtype=torch.long)
-    results = model(draft).detach().numpy()
+    results = [
+        ort_session.run(None, {INPUT_NAME: np.expand_dims(hero_ids, axis=0)})
+        for hero_ids in match_hero_ids
+    ]
     for match, result in zip(matches, results):
         print('Radiant:')
         for hero in match[:5]:

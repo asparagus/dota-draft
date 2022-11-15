@@ -89,8 +89,8 @@ class MatchDataset(torch.utils.data.IterableDataset):
 
 # This code can be used to try this out.
 if __name__ == '__main__':
-    run = wandb.init(name='ingestion-test')
-    artifact = run.use_artifact('asparagus/dota-draft/matches:v0', type='dataset')
+    wandb_api = wandb.Api()
+    artifact = wandb_api.artifact('asparagus/dota-draft/matches:v0')
     artifact_dir = artifact.download()
     dataset = MatchDataset(
         local_dir=artifact_dir,

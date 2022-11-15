@@ -7,7 +7,6 @@ python -m draft.training.train --data.artifact_id=asparagus/dota-draft/matches:v
 """
 from typing import List, Optional
 import argparse
-import copy
 import os
 
 import pytorch_lightning as pl
@@ -46,7 +45,6 @@ def create_logger(run_name: Optional[str] = None):
 
 
 def export(
-        model: ModelWrapperConfig,
         checkpoint_dir: str,
         checkpoint: str,
     ) -> wandb.Artifact:
@@ -55,7 +53,6 @@ def export(
     The artifact contains both the exported model and original checkpoint.
 
     Args:
-        model: The model to export
         checkpoint_dir: The directory where the checkpoints are stored
         checkpoint: The name of the checkpoint to load before exporting
     """
@@ -67,12 +64,10 @@ def export(
     )
 
     onnx_path = ckpt_path.replace('.ckpt', '.onnx')
-    ckpt_state = torch.load(ckpt_path)['state_dict']
-    model_copy = copy.deepcopy(model)
-    model_copy.load_state_dict(ckpt_state)
+    model = ModelWrapper.load_from_checkpoint(ckpt_path)
     model_args = torch.ones((1, 10)).int()
     torch.onnx.export(
-        model_copy.to_torchscript(),
+        model.to_torchscript(),
         model_args,
         onnx_path,
     )
@@ -169,11 +164,11 @@ def train(logger: WandbLogger):
         validation_loader,
     )
 
-    # Log the trained model
+    # Export and generate trained model artifacts
     checkpoints = os.listdir(checkpoint_path)
     for ckpt in checkpoints:
         wandb.run.log_artifact(
-            export(model, checkpoint_path, ckpt)
+            export(checkpoint_path, ckpt)
         )
 
 

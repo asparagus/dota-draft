@@ -29,6 +29,7 @@ class ModelWrapper(pl.LightningModule):
             module: The module that does the learning
         """
         super().__init__()
+        self.save_hyperparameters()
         self.module = module
         self.symmetric = config.symmetric
         self.learning_rate = config.learning_rate
