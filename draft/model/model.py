@@ -1,5 +1,4 @@
 """Module containing the ModelWrapper lightning module and its config."""
-from typing import Optional
 from attrs import define
 
 import torch
@@ -9,31 +8,43 @@ from torch import optim
 import torchmetrics
 import pytorch_lightning as pl
 
+from draft.model.embedding import Embedding, EmbeddingConfig
+from draft.model.mlp import Mlp, MlpConfig
+from draft.model.team_modules import TeamMerger, TeamSplitter
+
 
 @define
-class ModelWrapperConfig:
+class ModelConfig:
     """Configuration used for the model wrapper."""
+    embedding_config: EmbeddingConfig
+    mlp_config: MlpConfig
     symmetric: bool
     learning_rate: float = 1e-3
     weight_decay: float = 1e-5
 
 
-class ModelWrapper(pl.LightningModule):
+class Model(pl.LightningModule):
     """Wrapper around an ml module."""
 
-    def __init__(self, config: ModelWrapperConfig, module: Optional[torch.nn.Module] = None):
+    def __init__(self, config: ModelConfig):
         """Initialize the model with the given config.
 
         Args:
             config: The config used for this wrapper
-            module: The module that does the learning
         """
         super().__init__()
         self.save_hyperparameters()
-        self.module = module
+        self.embedding = Embedding(config.embedding_config)
+        self.mlp = Mlp(config.mlp_config)
+        self.splitter = TeamSplitter()
+        self.merger = TeamMerger()
         self.symmetric = config.symmetric
         self.learning_rate = config.learning_rate
         self.weight_decay = config.weight_decay
+
+        last_dimension = config.mlp_config.layers[-1]
+        self.final_layer = nn.Linear(last_dimension, 1)
+
         if config.symmetric:
             self.train_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
             self.val_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
@@ -45,7 +56,7 @@ class ModelWrapper(pl.LightningModule):
             self.loss_fn = nn.functional.binary_cross_entropy
             self.activation_fn = nn.Sigmoid()
 
-    def preprocess_input(self, x: torch.Tensor):
+    def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
         """Preprocessing function for the inputs.
 
         Args:
@@ -53,7 +64,7 @@ class ModelWrapper(pl.LightningModule):
         """
         return x
 
-    def preprocess_label(self, y: torch.Tensor):
+    def preprocess_label(self, y: torch.Tensor) -> torch.Tensor:
         """Preprocessing function for the labels.
 
         Args:
@@ -63,22 +74,7 @@ class ModelWrapper(pl.LightningModule):
             return y.byte()
         return y.float().unsqueeze(1)
 
-    def flip(self, x: torch.Tensor):
-        """Flip teams.
-
-        Used when attempting to ensure symmetric results.
-
-        Args:
-            x: (batch_size, 10) vector with the IDs for each hero
-
-        Returns:
-            (batch_size, 10) Draft representation with teams flipped
-        """
-        radiant = x.narrow(dim=1, start=0, length=5)
-        dire = x.narrow(dim=1, start=5, length=5)
-        return torch.cat([dire, radiant], dim=1)
-
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the forward pass from the draft until the win probabilities.
 
         Args:
@@ -88,12 +84,18 @@ class ModelWrapper(pl.LightningModule):
             (batch_size, 2) win probabilities for both teams
         """
         processed = self.preprocess_input(x)
-        logits = self.module(processed)
+        embeddings = self.embedding(processed)
+        radiant, dire = self.splitter(embeddings)
+        draft = self.merger(radiant, dire)
+        logits = self.final_layer(
+            self.mlp(draft)
+        )
 
         if self.symmetric:
-            flipped = self.flip(x)
-            flipped_processed = self.preprocess_input(flipped)
-            flipped_logits = self.module(flipped_processed)
+            flipped_draft = self.merger(dire, radiant)
+            flipped_logits = self.final_layer(
+                self.mlp(flipped_draft)
+            )
             logits = torch.cat([logits, flipped_logits], dim=1)
 
         return self.activation_fn(logits)

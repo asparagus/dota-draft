@@ -8,47 +8,39 @@ from torch import nn
 
 
 @define
-class MLPConfig:
+class MlpConfig:
     """Configuration used for the simple model."""
-    num_heroes: int
+    input_dimension: int
     layers: Tuple[int]
+    activation: bool = True
 
 
-class MLP(nn.Module):
+class Mlp(nn.Module):
     """A simple model."""
 
-    def __init__(self, config: MLPConfig):
+    def __init__(self, config: MlpConfig):
         """Initialize the model with the given config.
 
         Args:
             config: The config used for this module
         """
         super().__init__()
-        embedding_dim = config.layers[0]
-        self.embeddings = nn.Embedding(config.num_heroes, embedding_dim, padding_idx=0)
-        layers = []
-        for i in range(len(config.layers) - 1):
-            layers.append(nn.Linear(config.layers[i], config.layers[i + 1]))
+        layers = [nn.Linear(config.input_dimension, config.layers[0])]
+        for i, output_dim in enumerate(config.layers[1:]):
+            input_dim = config.layers[i]
             layers.append(nn.ReLU())
-        layers.append(nn.Linear(config.layers[-1], 1))
+            layers.append(nn.Linear(input_dim, output_dim))
+        if config.activation:
+            layers.append(nn.ReLU())
         self.sequential = nn.Sequential(*layers)
 
-    def forward(self, x: torch.Tensor):
-        """Compute the forward pass from the draft up to the logits.
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute the forward pass.
 
         Args:
-            x: (batch_size, 10) vector with the IDs for each hero
+            x: (batch_size, ..., config.input_size) input tensor
 
         Returns:
-            (batch_size, 1 or 2) logits before applying the activation function
+            (batch_size, ..., config.layers[-1] output of the configured mlps
         """
-        hero_embeddings = self.embeddings(x)
-
-        radiant_hero_embeddings = hero_embeddings.narrow(dim=1, start=0, length=5)
-        dire_hero_embeddings = hero_embeddings.narrow(dim=1, start=5, length=5)
-        radiant_embedding = radiant_hero_embeddings.sum(dim=1)
-        dire_embedding = dire_hero_embeddings.sum(dim=1)
-        draft_embedding = radiant_embedding - dire_embedding
-        logits = self.sequential(draft_embedding)
-
-        return logits
+        return self.sequential(x)

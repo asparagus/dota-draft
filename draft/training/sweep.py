@@ -39,15 +39,20 @@ SWEEP_CONFIGURATION = {
         Arguments.MODEL_WEIGHT_DECAY.name: {
             'value': 1e-5,
         },
+        Arguments.MODEL_EMBEDDING_SIZE.name: {
+            'values': [64, 128, 256],
+        },
         Arguments.MODEL_LAYERS.name: {
             'values': [
                 [64, 64],
-                [128, 32],
-                [128, 64],
                 [128, 128],
-                [128, 64, 64],
-                [64, 64, 64],
+                [128, 64],
+                [256, 256],
+                [256, 128],
             ],
+        },
+        Arguments.MODEL_SYMMETRIC.name: {
+            'values': [False, True],
         }
     },
 }
@@ -64,12 +69,12 @@ def start_sweep(args: argparse.Namespace):
         SWEEP_CONFIGURATION['name'] = args.name
     SWEEP_CONFIGURATION['method'] = args.method
     SWEEP_CONFIGURATION['parameters'].update({
-        'data.path': {'value': kwargs['data.path']}
+        Arguments.DATA_ARTIFACT_ID.name: {'value': kwargs[Arguments.DATA_ARTIFACT_ID.name]}
     })
     print(yaml.dump(SWEEP_CONFIGURATION, indent=4))
     sweep_id = wandb.sweep(sweep=SWEEP_CONFIGURATION, project=WANDB.project)
     if args.count:
-        wandb.agent(sweep_id, function=train.main, count=args.count)
+        wandb.agent(sweep_id, function=train.main, project=WANDB.project, count=args.count)
 
 
 def continue_sweep(args: argparse.Namespace):
@@ -78,7 +83,7 @@ def continue_sweep(args: argparse.Namespace):
     Args:
         args: Parsed command-line arguments
     """
-    wandb.agent(args.sweep_id, function=train.main, count=args.count)
+    wandb.agent(args.sweep_id, function=train.main, project=WANDB.project, count=args.count)
 
 
 if __name__ == '__main__':
@@ -88,7 +93,7 @@ if __name__ == '__main__':
     start_parser.add_argument('--count', default=0, type=int, help='Number of runs to start for the sweep')
     start_parser.add_argument('--name', default=None, help='Name for the sweep')
     start_parser.add_argument('--method', default='random', help='Method for the hyperparameter search', choices=['random', 'grid', 'bayes'])
-    start_parser.add_argument('--data.path', required=True, help='Path to the data for training the model')
+    start_parser.add_argument(f'--{Arguments.DATA_ARTIFACT_ID.name}', required=True, help='Id for the dataset artifact to train the model')
     start_parser.set_defaults(func=start_sweep)
     continue_parser = subparsers.add_parser('continue', help='Continue a sweep')
     continue_parser.add_argument('sweep_id', type=str, help='ID for the sweep to continue')

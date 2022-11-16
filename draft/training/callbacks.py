@@ -33,7 +33,7 @@ class WeightLoggerCallback(Callback):
         Args:
             pl_module: The module from which to get the weights
         """
-        embeddings = pl_module.module.embeddings.weight.detach().numpy()
+        embeddings = pl_module.embedding.embeddings.weight.detach().numpy()
         table = wandb.Table(columns=['embedding'])
         for e in embeddings:
             table.add_data(e)

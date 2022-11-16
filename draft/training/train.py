@@ -17,8 +17,9 @@ import torch.utils.data
 import wandb
 
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
-from draft.model.mlp import MLP, MLPConfig
-from draft.model.wrapper import ModelWrapper, ModelWrapperConfig
+from draft.model.embedding import Embedding, EmbeddingConfig
+from draft.model.mlp import Mlp, MlpConfig
+from draft.model.model import Model, ModelConfig
 from draft.providers import WANDB
 from draft.training.argument import Arguments, read_config
 from draft.training.callbacks import OutputLoggerCallback, WeightLoggerCallback
@@ -64,7 +65,7 @@ def export(
     )
 
     onnx_path = ckpt_path.replace('.ckpt', '.onnx')
-    model = ModelWrapper.load_from_checkpoint(ckpt_path)
+    model = Model.load_from_checkpoint(ckpt_path)
     model_args = torch.ones((1, 10)).int()
     torch.onnx.export(
         model.to_torchscript(),
@@ -117,17 +118,21 @@ def train(logger: WandbLogger):
         validation_dataset,
         **DATALOADER_CONFIG,
     )
-    mlp_config = MLPConfig(
-        num_heroes=read_config(Arguments.MODEL_NUM_HEROES),
-        layers=read_config(Arguments.MODEL_LAYERS),
-    )
-    wrapper_config = ModelWrapperConfig(
+    model_config = ModelConfig(
+        embedding_config=EmbeddingConfig(
+            num_heroes=read_config(Arguments.MODEL_NUM_HEROES),
+            embedding_size=read_config(Arguments.MODEL_EMBEDDING_SIZE),
+        ),
+        mlp_config=MlpConfig(
+            input_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
+            layers=read_config(Arguments.MODEL_LAYERS),
+        ),
         symmetric=read_config(Arguments.MODEL_SYMMETRIC),
         learning_rate=read_config(Arguments.MODEL_LEARNING_RATE),
         weight_decay=read_config(Arguments.MODEL_WEIGHT_DECAY),
     )
-    module = MLP(mlp_config)
-    model = ModelWrapper(config=wrapper_config, module=module)
+    model = Model(config=model_config)
+    print(model)
 
     checkpoint_path = os.path.join(wandb.run.dir, 'checkpoints')
     callbacks = [

@@ -18,6 +18,7 @@ class Arguments:
     DATA_BATCH_SIZE = Argument('data.batch_size', int, default=256)
     REPRODUCIBILITY_SEED = Argument('reproducibility.seed', int, default=1)
     MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=138)
+    MODEL_EMBEDDING_SIZE = Argument('model.embedding_size', int, default=64)
     MODEL_SYMMETRIC = Argument('model.symmetric', bool, default=True)
     MODEL_LEARNING_RATE = Argument('model.learning_rate', float, default=1e-3)
     MODEL_LAYERS = Argument('model.layers', List[int], default=[32, 16])
