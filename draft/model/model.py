@@ -10,7 +10,12 @@ import pytorch_lightning as pl
 
 from draft.model.embedding import Embedding, EmbeddingConfig
 from draft.model.mlp import Mlp, MlpConfig
-from draft.model.team_modules import TeamMerger, TeamSplitter
+from draft.model.team_modules import TeamMerger, TeamSplitter, TeamConvolution, TeamConvolutionConfig
+
+
+INPUT_NAME = 'heroes'
+OUTPUT_NAME = 'win_probabilities'
+BATCH_AXIS = 'examples'
 
 
 @define
@@ -18,6 +23,7 @@ class ModelConfig:
     """Configuration used for the model wrapper."""
     embedding_config: EmbeddingConfig
     mlp_config: MlpConfig
+    team_convolution_config: TeamConvolutionConfig
     symmetric: bool
     learning_rate: float = 1e-3
     weight_decay: float = 1e-5
@@ -35,6 +41,7 @@ class Model(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.embedding = Embedding(config.embedding_config)
+        self.team_convolution = TeamConvolution(config.team_convolution_config)
         self.mlp = Mlp(config.mlp_config)
         self.splitter = TeamSplitter()
         self.merger = TeamMerger()
@@ -85,19 +92,18 @@ class Model(pl.LightningModule):
         """
         processed = self.preprocess_input(x)
         embeddings = self.embedding(processed)
-        radiant, dire = self.splitter(embeddings)
-        draft = self.merger(radiant, dire)
-        logits = self.final_layer(
-            self.mlp(draft)
-        )
+        radiant_hero_embeddings, dire_hero_embeddings = self.splitter(embeddings)
+        radiant_team_embeddings, dire_team_embeddings = self.team_convolution(radiant_hero_embeddings, dire_hero_embeddings)
+        draft = self.merger(radiant_team_embeddings, dire_team_embeddings)
+        draft_mlp_output = self.mlp(draft)
+        logits = self.final_layer(draft_mlp_output)
 
         if self.symmetric:
-            flipped_draft = self.merger(dire, radiant)
-            flipped_logits = self.final_layer(
-                self.mlp(flipped_draft)
-            )
-            logits = torch.cat([logits, flipped_logits], dim=1)
-
+            flipped_draft = self.merger(dire_team_embeddings, radiant_team_embeddings)
+            flipped_draft_output = self.mlp(flipped_draft)
+            flipped_logits = self.final_layer(flipped_draft_output)
+            softmax_logits = torch.cat([logits, flipped_logits], dim=1)
+            return self.activation_fn(softmax_logits)
         return self.activation_fn(logits)
 
     def training_step(self, batch: torch.Tensor, batch_idx: int):
@@ -144,3 +150,23 @@ class Model(pl.LightningModule):
             weight_decay=self.weight_decay,
         )
         return optimizer
+
+    def export(self, path: str):
+        """Export the model to the given path using ONNX.
+
+        Args:
+            path: The path to export the model to
+        """
+        model_args = torch.ones((1, 10)).int()
+        torch.onnx.export(
+            self.to_torchscript(),
+            model_args,
+            path,
+            opset_version=14,
+            input_names=[INPUT_NAME],
+            output_names=[OUTPUT_NAME],
+            dynamic_axes={
+                INPUT_NAME: {0: BATCH_AXIS},
+                OUTPUT_NAME: {0: BATCH_AXIS},
+            },
+        )

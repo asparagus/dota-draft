@@ -17,9 +17,10 @@ import torch.utils.data
 import wandb
 
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
-from draft.model.embedding import Embedding, EmbeddingConfig
-from draft.model.mlp import Mlp, MlpConfig
+from draft.model.embedding import EmbeddingConfig
+from draft.model.mlp import MlpConfig
 from draft.model.model import Model, ModelConfig
+from draft.model.team_modules import TeamConvolutionConfig
 from draft.providers import WANDB
 from draft.training.argument import Arguments, read_config
 from draft.training.callbacks import OutputLoggerCallback, WeightLoggerCallback
@@ -66,12 +67,7 @@ def export(
 
     onnx_path = ckpt_path.replace('.ckpt', '.onnx')
     model = Model.load_from_checkpoint(ckpt_path)
-    model_args = torch.ones((1, 10)).int()
-    torch.onnx.export(
-        model.to_torchscript(),
-        model_args,
-        onnx_path,
-    )
+    model.export(onnx_path)
 
     artifact.add_file(
         local_path=onnx_path,
@@ -123,6 +119,11 @@ def train(logger: WandbLogger):
             num_heroes=read_config(Arguments.MODEL_NUM_HEROES),
             embedding_size=read_config(Arguments.MODEL_EMBEDDING_SIZE),
         ),
+        team_convolution_config=TeamConvolutionConfig(
+            input_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
+            output_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
+            activation=True,
+        ),
         mlp_config=MlpConfig(
             input_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
             layers=read_config(Arguments.MODEL_LAYERS),
@@ -132,7 +133,6 @@ def train(logger: WandbLogger):
         weight_decay=read_config(Arguments.MODEL_WEIGHT_DECAY),
     )
     model = Model(config=model_config)
-    print(model)
 
     checkpoint_path = os.path.join(wandb.run.dir, 'checkpoints')
     callbacks = [

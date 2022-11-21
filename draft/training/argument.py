@@ -20,9 +20,9 @@ class Arguments:
     MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=138)
     MODEL_EMBEDDING_SIZE = Argument('model.embedding_size', int, default=64)
     MODEL_SYMMETRIC = Argument('model.symmetric', bool, default=True)
-    MODEL_LEARNING_RATE = Argument('model.learning_rate', float, default=1e-3)
-    MODEL_LAYERS = Argument('model.layers', List[int], default=[32, 16])
-    MODEL_WEIGHT_DECAY = Argument('model.weight_decay', float, default=1e-5)
+    MODEL_LEARNING_RATE = Argument('model.learning_rate', float, default=1e-4)
+    MODEL_LAYERS = Argument('model.layers', List[int], default=[32])
+    MODEL_WEIGHT_DECAY = Argument('model.weight_decay', float, default=1e-4)
 
 
 def read_config(arg: Argument, config: Optional[Dict] = None):
