@@ -19,6 +19,7 @@ class Arguments:
     REPRODUCIBILITY_SEED = Argument('reproducibility.seed', int, default=1)
     MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=138)
     MODEL_EMBEDDING_SIZE = Argument('model.embedding_size', int, default=64)
+    MODEL_TEAM_CONVOLUTION_LAYERS = Argument('model.team_convolution_layers', List[int], default=[64])
     MODEL_SYMMETRIC = Argument('model.symmetric', bool, default=True)
     MODEL_LEARNING_RATE = Argument('model.learning_rate', float, default=1e-4)
     MODEL_LAYERS = Argument('model.layers', List[int], default=[32])

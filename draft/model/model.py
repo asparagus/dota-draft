@@ -92,8 +92,8 @@ class Model(pl.LightningModule):
         """
         processed = self.preprocess_input(x)
         embeddings = self.embedding(processed)
-        radiant_hero_embeddings, dire_hero_embeddings = self.splitter(embeddings)
-        radiant_team_embeddings, dire_team_embeddings = self.team_convolution(radiant_hero_embeddings, dire_hero_embeddings)
+        team_embeddings = self.team_convolution(embeddings)
+        radiant_team_embeddings, dire_team_embeddings = self.splitter(team_embeddings)
         draft = self.merger(radiant_team_embeddings, dire_team_embeddings)
         draft_mlp_output = self.mlp(draft)
         logits = self.final_layer(draft_mlp_output)

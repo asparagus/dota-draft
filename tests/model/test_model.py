@@ -11,8 +11,8 @@ from draft.model import team_modules
 def build_model(symmetric: bool):
     config = model.ModelConfig(
         embedding_config=embedding.EmbeddingConfig(num_heroes=20, embedding_size=20),
-        team_convolution_config=team_modules.TeamConvolutionConfig(input_dimension=20, output_dimension=20),
-        mlp_config=mlp.MlpConfig(input_dimension=20, layers=[10, 10]),
+        team_convolution_config=team_modules.TeamConvolutionConfig(input_dimension=20, layers=[20]),
+        mlp_config=mlp.MlpConfig(input_dimension=20, layers=[10, 5]),
         symmetric=symmetric,
     )
     return model.Model(config)

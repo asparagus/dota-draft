@@ -43,10 +43,8 @@ def test_merge():
 
 
 def test_convolution_dimensions():
-    config = team_modules.TeamConvolutionConfig(input_dimension=10, output_dimension=10, activation=True)
+    config = team_modules.TeamConvolutionConfig(input_dimension=10, layers=[10], activation=True)
     conv = team_modules.TeamConvolution(config=config)
-    radiant = torch.rand(1, 5, 10)
-    dire = torch.rand(1, 5, 10)
-    out_radiant, out_dire = conv(radiant, dire)
-    assert out_radiant.shape == radiant.shape
-    assert out_dire.shape == dire.shape
+    draft = torch.rand(1, 10, 10)
+    out = conv(draft)
+    assert out.shape == draft.shape

@@ -121,11 +121,11 @@ def train(logger: WandbLogger):
         ),
         team_convolution_config=TeamConvolutionConfig(
             input_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
-            output_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
+            layers=read_config(Arguments.MODEL_TEAM_CONVOLUTION_LAYERS),
             activation=True,
         ),
         mlp_config=MlpConfig(
-            input_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
+            input_dimension=read_config(Arguments.MODEL_TEAM_CONVOLUTION_LAYERS)[-1],
             layers=read_config(Arguments.MODEL_LAYERS),
         ),
         symmetric=read_config(Arguments.MODEL_SYMMETRIC),

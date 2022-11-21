@@ -34,21 +34,35 @@ SWEEP_CONFIGURATION = {
             'values': [128, 256, 512, 1024],
         },
         Arguments.MODEL_LEARNING_RATE.name: {
-            'value': 1e-3,
+            'values': [1e-3, 1e-4, 1e-5],
         },
         Arguments.MODEL_WEIGHT_DECAY.name: {
-            'value': 1e-5,
+            'values': [1e-4, 1e-5],
         },
         Arguments.MODEL_EMBEDDING_SIZE.name: {
-            'values': [64, 128, 256],
+            'values': [32, 64, 128, 256],
+        },
+        Arguments.MODEL_TEAM_CONVOLUTION_LAYERS.name: {
+            'values': [
+                [32, 32],
+                [64, 64],
+                [128, 128],
+                [256, 128],
+                [128, 64],
+                [64, 32],
+                [64, 64, 64],
+                [32, 32, 32],
+            ],
         },
         Arguments.MODEL_LAYERS.name: {
             'values': [
+                [32],
+                [64],
+                [128],
+                [256],
+                [32, 32],
                 [64, 64],
                 [128, 128],
-                [128, 64],
-                [256, 256],
-                [256, 128],
             ],
         },
         Arguments.MODEL_SYMMETRIC.name: {
