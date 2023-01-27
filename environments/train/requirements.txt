@@ -1,6 +1,6 @@
 attrs==22.1.0
 numpy==1.23.3
-onnx==1.12.0
+onnx==1.13.0
 pytorch-lightning==1.8.1
 torch==1.13.0
 torchmetrics==0.10.2
