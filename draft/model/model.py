@@ -1,20 +1,22 @@
 """Module containing the ModelWrapper lightning module and its config."""
+from typing import Dict, Tuple
 from attrs import define
 
 import torch
-from torch import nn
 from torch import optim
 
-import torchmetrics
 import pytorch_lightning as pl
 
+from jigsaw.composite import Composite as JigsawComposite
+from jigsaw.piece import LossFunction as JigsawLossFunction
+from jigsaw.piece import Module as JigsawModule
+
+from draft.model.keys import FeatureKeys, LabelKeys
 from draft.model.embedding import Embedding, EmbeddingConfig
-from draft.model.mlp import Mlp, MlpConfig
-from draft.model.team_modules import TeamMerger, TeamSplitter, TeamConvolution, TeamConvolutionConfig
+from draft.model.team_modules import TeamConvolution, TeamConvolutionConfig
+from draft.model.match_prediction import MatchPrediction, MatchPredictionConfig
 
 
-INPUT_NAME = 'heroes'
-OUTPUT_NAME = 'win_probabilities'
 BATCH_AXIS = 'examples'
 
 
@@ -22,9 +24,8 @@ BATCH_AXIS = 'examples'
 class ModelConfig:
     """Configuration used for the model wrapper."""
     embedding_config: EmbeddingConfig
-    mlp_config: MlpConfig
     team_convolution_config: TeamConvolutionConfig
-    symmetric: bool
+    match_prediction_config: MatchPredictionConfig
     learning_rate: float = 1e-3
     weight_decay: float = 1e-5
 
@@ -39,74 +40,49 @@ class Model(pl.LightningModule):
             config: The config used for this wrapper
         """
         super().__init__()
+        self.key_feature_hero_picks = FeatureKeys.FEATURE_HERO_PICKS
+        self.key_label_radiant_win = LabelKeys.LABEL_RADIANT_WIN
         self.save_hyperparameters()
-        self.embedding = Embedding(config.embedding_config)
-        self.team_convolution = TeamConvolution(config.team_convolution_config)
-        self.mlp = Mlp(config.mlp_config)
-        self.splitter = TeamSplitter()
-        self.merger = TeamMerger()
-        self.symmetric = config.symmetric
+        composite = JigsawComposite(
+            components=[
+                Embedding(config.embedding_config),
+                TeamConvolution(config.team_convolution_config),
+                MatchPrediction(config.match_prediction_config),
+            ]
+        )
+        self.inner_modules = JigsawComposite(composite.extract(JigsawModule))
+        self.losses = torch.jit.ignore(
+            JigsawComposite(composite.extract(JigsawLossFunction))
+        )
         self.learning_rate = config.learning_rate
         self.weight_decay = config.weight_decay
 
-        last_dimension = config.mlp_config.layers[-1]
-        self.final_layer = nn.Linear(last_dimension, 1)
-
-        if config.symmetric:
-            self.train_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
-            self.val_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=2)
-            self.loss_fn = nn.functional.cross_entropy
-            self.activation_fn = nn.Softmax(dim=1)
-        else:
-            self.train_accuracy = torchmetrics.classification.BinaryAccuracy()
-            self.val_accuracy = torchmetrics.classification.BinaryAccuracy()
-            self.loss_fn = nn.functional.binary_cross_entropy
-            self.activation_fn = nn.Sigmoid()
-
-    def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+    def preprocess_input(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Preprocessing function for the inputs.
 
         Args:
             x: (batch_size, 10) vector with the IDs for each hero
         """
-        return x
+        return {self.key_feature_hero_picks: x}
 
-    def preprocess_label(self, y: torch.Tensor) -> torch.Tensor:
+    def preprocess_label(self, y: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Preprocessing function for the labels.
 
         Args:
             y: (batch_size, 1) vector with the results of each match
         """
-        if self.symmetric:
-            return y.byte()
-        return y.float().unsqueeze(1)
+        return {self.key_label_radiant_win: y.float()}
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute the forward pass from the draft until the win probabilities.
+    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+        """Compute the model predictions.
 
         Args:
-            x: (batch_size, 10) vector with the IDs for each hero
-
-        Returns:
-            (batch_size, 2) win probabilities for both teams
+            x: (batch_size, 10) vector with the IDs for the heroes picked
         """
-        processed = self.preprocess_input(x)
-        embeddings = self.embedding(processed)
-        team_embeddings = self.team_convolution(embeddings)
-        radiant_team_embeddings, dire_team_embeddings = self.splitter(team_embeddings)
-        draft = self.merger(radiant_team_embeddings, dire_team_embeddings)
-        draft_mlp_output = self.mlp(draft)
-        logits = self.final_layer(draft_mlp_output)
+        data = self.preprocess_input(x)
+        return data | self.inner_modules(data)
 
-        if self.symmetric:
-            flipped_draft = self.merger(dire_team_embeddings, radiant_team_embeddings)
-            flipped_draft_output = self.mlp(flipped_draft)
-            flipped_logits = self.final_layer(flipped_draft_output)
-            softmax_logits = torch.cat([logits, flipped_logits], dim=1)
-            return self.activation_fn(softmax_logits)
-        return self.activation_fn(logits)
-
-    def training_step(self, batch: torch.Tensor, batch_idx: int):
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int):
         """Run a training step.
 
         Args:
@@ -114,17 +90,17 @@ class Model(pl.LightningModule):
             batch_idx: The index for this batch
         """
         x, y = batch
-        x = self.preprocess_input(x)
-        y = self.preprocess_label(y)
-        out = self.forward(x)
-        loss = self.loss_fn(out, y)
+        data = self.forward(x)
+
+        losses = self.losses(data | self.preprocess_label(y))
+        loss = sum([v for _, v in losses.items()])
         self.log('train_loss', loss, on_epoch=True, on_step=False)
 
-        self.train_accuracy(out, y)
-        self.log('train_acc', self.train_accuracy, on_epoch=True, on_step=False)
+        # self.train_accuracy(out, y)
+        # self.log('train_acc', self.train_accuracy, on_epoch=True, on_step=False)
         return loss
 
-    def validation_step(self, batch: torch.Tensor, batch_idx: int):
+    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int):
         """Run a validation step.
 
         Args:
@@ -132,15 +108,15 @@ class Model(pl.LightningModule):
             batch_idx: The index for this batch
         """
         x, y = batch
-        x = self.preprocess_input(x)
-        y = self.preprocess_label(y)
-        out = self.forward(x)
-        loss = self.loss_fn(out, y)
+        data = self.forward(x)
+
+        losses = self.losses(data | self.preprocess_label(y))
+        loss = sum([v for _, v in losses.items()])
         self.log('val_loss', loss, on_epoch=True, on_step=False)
 
-        self.val_accuracy(out, y)
-        self.log('val_acc', self.val_accuracy, on_epoch=True, on_step=False)
-        return {'loss': loss, 'predictions': out}
+        # self.val_accuracy(out, y)
+        # self.log('val_acc', self.val_accuracy, on_epoch=True, on_step=False)
+        return {'loss': loss}
 
     def configure_optimizers(self):
         """Set up the optimizer."""
@@ -159,14 +135,14 @@ class Model(pl.LightningModule):
         """
         model_args = torch.ones((1, 10)).int()
         torch.onnx.export(
-            self.to_torchscript(),
+            self,
             model_args,
             path,
             opset_version=14,
-            input_names=[INPUT_NAME],
-            output_names=[OUTPUT_NAME],
+            input_names=self.inner_modules.inputs(),
+            output_names=self.inner_modules.outputs(),
             dynamic_axes={
-                INPUT_NAME: {0: BATCH_AXIS},
-                OUTPUT_NAME: {0: BATCH_AXIS},
+                key: {0: BATCH_AXIS}
+                for key in self.inner_modules.inputs() + self.inner_modules.outputs()
             },
         )

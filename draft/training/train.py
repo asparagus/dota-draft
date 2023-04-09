@@ -18,6 +18,7 @@ import wandb
 
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
 from draft.model.embedding import EmbeddingConfig
+from draft.model.match_prediction import MatchPredictionConfig
 from draft.model.mlp import MlpConfig
 from draft.model.model import Model, ModelConfig
 from draft.model.team_modules import TeamConvolutionConfig
@@ -124,11 +125,13 @@ def train(logger: WandbLogger):
             layers=read_config(Arguments.MODEL_TEAM_CONVOLUTION_LAYERS),
             activation=True,
         ),
-        mlp_config=MlpConfig(
-            input_dimension=read_config(Arguments.MODEL_TEAM_CONVOLUTION_LAYERS)[-1],
-            layers=read_config(Arguments.MODEL_LAYERS),
+        match_prediction_config=MatchPredictionConfig(
+            symmetric=read_config(Arguments.MODEL_SYMMETRIC),
+            mlp_config=MlpConfig(
+                input_dimension=read_config(Arguments.MODEL_TEAM_CONVOLUTION_LAYERS)[-1],
+                layers=read_config(Arguments.MODEL_LAYERS),
+            ),
         ),
-        symmetric=read_config(Arguments.MODEL_SYMMETRIC),
         learning_rate=read_config(Arguments.MODEL_LEARNING_RATE),
         weight_decay=read_config(Arguments.MODEL_WEIGHT_DECAY),
     )
@@ -144,15 +147,15 @@ def train(logger: WandbLogger):
             dirpath=checkpoint_path,
             filename='chkpt-{epoch:02d}-{val_loss:.2f}',
         ),
-        OutputLoggerCallback(
-            output_key='predictions',
-            on_validation_batch_end=True,
-            bins=10,
-            range=(0, 1),
-        ),
-        WeightLoggerCallback(
-            on_train_end=True,
-        ),
+        # OutputLoggerCallback(
+        #     output_key='predictions',
+        #     on_validation_batch_end=True,
+        #     bins=10,
+        #     range=(0, 1),
+        # ),
+        # WeightLoggerCallback(
+        #     on_train_end=True,
+        # ),
     ]
     trainer = pl.Trainer(
         # gpus=1,

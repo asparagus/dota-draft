@@ -1,10 +1,14 @@
 """Module containing the TeamSplitter and TeamMerger modules."""
-from typing import Tuple
+from typing import Dict, Tuple
 
 from attrs import define
 
 import torch
 from torch import nn
+
+from jigsaw.piece import Module as JigsawModule
+
+from draft.model.keys import FeatureKeys, OutputKeys
 
 
 class TeamSplitter(nn.Module):
@@ -114,7 +118,7 @@ class TeamConvolutionBlock(nn.Module):
         )
 
 
-class TeamConvolution(nn.Module):
+class TeamConvolution(JigsawModule):
     """A module for team convolution."""
 
     def __init__(self, config: TeamConvolutionConfig):
@@ -124,6 +128,8 @@ class TeamConvolution(nn.Module):
             config: The config to use for the module
         """
         super().__init__()
+        self.key_output_hero_embeddings = OutputKeys.OUTPUT_HERO_EMBEDDINGS
+        self.key_output_team_embeddings = OutputKeys.OUTPUT_TEAM_EMBEDDINGS
         layers = [TeamConvolutionBlock(config.input_dimension, config.layers[0])]
         for i, output_dim in enumerate(config.layers[1:]):
             input_dim = config.layers[i]
@@ -133,13 +139,26 @@ class TeamConvolution(nn.Module):
             layers.append(nn.ReLU())
         self.sequential = nn.Sequential(*layers)
 
-    def forward(self, draft: torch.Tensor) -> torch.Tensor:
+    def inputs(self) -> Tuple[str]:
+        """Inputs to the team convolution module are the hero embeddings."""
+        return tuple([self.key_output_hero_embeddings])
+
+    def outputs(self) -> Tuple[str]:
+        """Outputs from the team convolution module are the team embeddings."""
+        return tuple([self.key_output_team_embeddings])
+
+    def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Compute the forward pass.
 
         Args:
-            draft: (batch_size, 10, ...) input tensor for the draft
+            draft: (batch_size, 10, ...) input tensor for the hero embeddings
 
         Returns:
             (batch_size, 10, ...) embeddings after convolution
         """
-        return self.sequential(draft)
+        hero_embeddings = inputs[self.key_output_hero_embeddings]
+        team_embeddings = self.sequential(hero_embeddings)
+        outputs = {
+            self.key_output_team_embeddings: team_embeddings
+        }
+        return outputs
