@@ -12,7 +12,7 @@ from jigsaw.piece import Module as JigsawModule
 from jigsaw.piece import WrappedLoss
 
 from draft.model.keys import LabelKeys, OutputKeys
-from draft.model.mlp import Mlp, MlpConfig
+from draft.model.modules.mlp import Mlp, MlpConfig
 from draft.model.team_modules import TeamMerger, TeamSplitter
 
 

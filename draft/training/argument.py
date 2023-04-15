@@ -15,15 +15,15 @@ class Argument:
 class Arguments:
     """This class just holds the arguments that can be used and assigns a name to them."""
     DATA_ARTIFACT_ID = Argument('data.artifact_id', str, default=None)
-    DATA_BATCH_SIZE = Argument('data.batch_size', int, default=256)
+    DATA_BATCH_SIZE = Argument('data.batch_size', int, default=512)
     REPRODUCIBILITY_SEED = Argument('reproducibility.seed', int, default=1)
     MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=138)
     MODEL_EMBEDDING_SIZE = Argument('model.embedding_size', int, default=64)
-    MODEL_TEAM_CONVOLUTION_LAYERS = Argument('model.team_convolution_layers', List[int], default=[64])
+    MODEL_TEAM_CONVOLUTION_LAYERS = Argument('model.team_convolution_layers', List[int], default=[64, 64, 64])
     MODEL_SYMMETRIC = Argument('model.symmetric', bool, default=True)
     MODEL_LEARNING_RATE = Argument('model.learning_rate', float, default=1e-4)
-    MODEL_LAYERS = Argument('model.layers', List[int], default=[32])
-    MODEL_WEIGHT_DECAY = Argument('model.weight_decay', float, default=1e-4)
+    MODEL_LAYERS = Argument('model.layers', List[int], default=[64, 32, 32])
+    MODEL_WEIGHT_DECAY = Argument('model.weight_decay', float, default=1e-5)
 
 
 def read_config(arg: Argument, config: Optional[Dict] = None):

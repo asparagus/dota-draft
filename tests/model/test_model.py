@@ -3,7 +3,7 @@ import pytest
 import torch
 
 from draft.model import embedding
-from draft.model import mlp
+from draft.model.modules import mlp
 from draft.model import model
 from draft.model import team_modules
 

@@ -80,7 +80,7 @@ class Model(pl.LightningModule):
             x: (batch_size, 10) vector with the IDs for the heroes picked
         """
         data = self.preprocess_input(x)
-        return data | self.inner_modules(data)
+        return self.inner_modules(data)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int):
         """Run a training step.
@@ -92,7 +92,7 @@ class Model(pl.LightningModule):
         x, y = batch
         data = self.forward(x)
 
-        losses = self.losses(data | self.preprocess_label(y))
+        losses = self.losses(data | self.preprocess_input(x) | self.preprocess_label(y))
         loss = sum([v for _, v in losses.items()])
         self.log('train_loss', loss, on_epoch=True, on_step=False)
 

@@ -19,7 +19,7 @@ import wandb
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
 from draft.model.embedding import EmbeddingConfig
 from draft.model.match_prediction import MatchPredictionConfig
-from draft.model.mlp import MlpConfig
+from draft.model.modules.mlp import MlpConfig
 from draft.model.model import Model, ModelConfig
 from draft.model.team_modules import TeamConvolutionConfig
 from draft.providers import WANDB
