@@ -1,5 +1,8 @@
 """Module that defines filters for matches."""
+from typing import Optional
 import abc
+
+import datetime
 
 from draft.data.match import Match
 
@@ -12,7 +15,7 @@ class MatchFilter(abc.ABC):
     """
 
     @abc.abstractmethod
-    def __call__(self, match: Match):
+    def __call__(self, match: Match) -> bool:
         """Runs on the match and determines whether it should be kept.
         
         Args:
@@ -20,19 +23,19 @@ class MatchFilter(abc.ABC):
         """
         raise NotImplementedError()
 
-    def __or__(self, other: 'MatchFilter'):
+    def __or__(self, other: 'MatchFilter') -> 'MatchFilter':
         """Defines the or (|) operator between this and another filter."""
         return Disjunction(self, other)
 
-    def __ror__(self, other):
+    def __ror__(self, other) -> 'MatchFilter':
         """Defines the reverse or (|) operator between this and another filter."""
         return self.__or__(other)
 
-    def __and__(self, other: 'MatchFilter'):
+    def __and__(self, other: 'MatchFilter') -> 'MatchFilter':
         """Defines the and (&) operator between this and another filter."""
         return Conjunction(self, other)
 
-    def __invert__(self):
+    def __invert__(self) -> 'MatchFilter':
         """Defines the invert (~) operator for this filter."""
         return Negation(self)
 
@@ -50,7 +53,7 @@ class Disjunction(MatchFilter):
         self.filter_a = filter_a
         self.filter_b = filter_b
 
-    def __call__(self, match: Match):
+    def __call__(self, match: Match) -> bool:
         """Evaluates both filters and returns the or between them.
 
         Args:
@@ -72,7 +75,7 @@ class Conjunction(MatchFilter):
         self.filter_a = filter_a
         self.filter_b = filter_b
 
-    def __call__(self, match: Match):
+    def __call__(self, match: Match) -> bool:
         """Evaluates both filters and returns the and between them.
 
         Args:
@@ -92,7 +95,7 @@ class Negation(MatchFilter):
         """
         self.filter = filter
 
-    def __call__(self, match: Match):
+    def __call__(self, match: Match) -> bool:
         """Evaluates the filter and returns the opposite result.
 
         Args:
@@ -104,7 +107,7 @@ class Negation(MatchFilter):
 class ValidMatchFilter(MatchFilter):
     """A filter for removing invalid matches where the draft did not finish."""
 
-    def __call__(self, match: Match):
+    def __call__(self, match: Match) -> bool:
         """Evaluate whether the match had 5 heroes on both sides.
 
         Args:
@@ -127,7 +130,7 @@ class HighRankMatchFilter(MatchFilter):
                 below this will be discarded"""
         self.minimum_rank = minimum_rank
 
-    def __call__(self, match: Match):
+    def __call__(self, match: Match) -> bool:
         """Evaluate whether the match has the required rank.
 
         Args:
@@ -136,3 +139,33 @@ class HighRankMatchFilter(MatchFilter):
         return (
             match.avg_rank_tier >= self.minimum_rank
         )
+
+
+class DateFilter(MatchFilter):
+    """A filter for a particular date."""
+
+    def __init__(
+            self,
+            start_date: Optional[datetime.date] = None,
+            end_date: Optional[datetime.date] = None,
+        ):
+        """Initialize the filter with optional start and end dates.
+
+        Args:
+            start_date: (Optional) earliest date acceptable
+            end_date: (Optional) latest date acceptable
+        """
+        self.start_time = int(start_date.strftime('%s')) if start_date else None
+        self.end_time = int(end_date.strftime('%s')) if end_date else None
+
+    def __call__(self, match: Match) -> bool:
+        """Evaluate whether the match is within the date range.
+
+        Args:
+            match: The match to evaluate
+        """
+        if self.start_time and match.start_time < self.start_time:
+            return False
+        if self.end_time and match.start_time > self.end_time:
+            return False
+        return True

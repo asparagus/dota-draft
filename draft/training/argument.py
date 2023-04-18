@@ -17,7 +17,7 @@ class Arguments:
     DATA_ARTIFACT_ID = Argument('data.artifact_id', str, default=None)
     DATA_BATCH_SIZE = Argument('data.batch_size', int, default=512)
     REPRODUCIBILITY_SEED = Argument('reproducibility.seed', int, default=1)
-    MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=138)
+    MODEL_NUM_HEROES = Argument('model.num_heroes', int, default=139)
     MODEL_EMBEDDING_SIZE = Argument('model.embedding_size', int, default=64)
     MODEL_TEAM_CONVOLUTION_LAYERS = Argument('model.team_convolution_layers', List[int], default=[64, 64, 64])
     MODEL_SYMMETRIC = Argument('model.symmetric', bool, default=True)

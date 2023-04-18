@@ -12,6 +12,7 @@ class Match(dict):
     DIRE_TEAM = 'dire_team'
     AVG_RANK_TIER = 'avg_rank_tier'
     RADIANT_WIN = 'radiant_win'
+    START_TIME = 'start_time'
 
     def __init__(self, data: Dict):
         """Initialize the match with a dictionary.
@@ -48,6 +49,10 @@ class Match(dict):
     @property
     def radiant_win(self):
         return self._data[Match.RADIANT_WIN]
+
+    @property
+    def start_time(self):
+        return self._data[Match.START_TIME]
 
     def dumps(self):
         """Dump the data to a string."""

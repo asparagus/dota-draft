@@ -26,6 +26,7 @@ from draft.providers import WANDB
 from draft.training.argument import Arguments, read_config
 from draft.training.callbacks import OutputLoggerCallback, WeightLoggerCallback
 from draft.training.ingestion import MatchDataset
+from draft.training.patch import PATCH_732d
 
 
 ConfigArguments = [
@@ -89,7 +90,8 @@ def train(logger: WandbLogger):
         'local_dir': artifact_dir,
         'match_filter': (
             ValidMatchFilter() &
-            HighRankMatchFilter(30)
+            HighRankMatchFilter(30) &
+            PATCH_732d
         ),
     }
     DATALOADER_CONFIG = {
