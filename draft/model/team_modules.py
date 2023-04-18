@@ -1,5 +1,6 @@
 """Module containing the TeamSplitter and TeamMerger modules."""
 from typing import Dict, Tuple
+from attrs import define
 
 import torch
 from torch import nn
@@ -43,11 +44,48 @@ class TeamMerger(nn.Module):
         return team_1.sum(dim=1) - team_2.sum(dim=1)
 
 
-TeamConvolutionConfig = GcnnConfig
+@define
+class TeamConvolutionConfig:
+    """Configuration used for the simple model."""
+    gcnn_config: GcnnConfig
+    teammate_connections: bool
+    opponent_connections: bool
 
 
 class TeamConvolution(JigsawModule):
     """A module for team convolution."""
+
+    SELF_CONNECTIONS = torch.eye(10, dtype=torch.float)
+    TEAMMATE_CONNECTIONS = torch.tensor(
+        [
+            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 1, 0, 1, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 1, 0, 1, 1, 1],
+            [0, 0, 0, 0, 0, 1, 1, 0, 1, 1],
+            [0, 0, 0, 0, 0, 1, 1, 1, 0, 1],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 0],
+        ],
+        dtype=torch.float,
+    )
+    OPPONENT_CONNECTIONS = torch.tensor(
+        [
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        ],
+        dtype=torch.float,
+    )
 
     def __init__(self, config: TeamConvolutionConfig):
         """Initialize the TeamConvolution module with the given config.
@@ -58,46 +96,13 @@ class TeamConvolution(JigsawModule):
         super().__init__()
         self.key_output_hero_embeddings = OutputKeys.OUTPUT_HERO_EMBEDDINGS
         self.key_output_team_embeddings = OutputKeys.OUTPUT_TEAM_EMBEDDINGS
-        self.config = GcnnConfig
-        self.gcnn = Gcnn(
-            config,
-            adjacency_matrices=[
-                # Self-Connections
-                torch.eye(10, dtype=torch.float),
-                # Teammate-Connections
-                torch.tensor(
-                    [
-                        [0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                        [1, 0, 1, 1, 1, 0, 0, 0, 0, 0],
-                        [1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
-                        [1, 1, 1, 0, 1, 0, 0, 0, 0, 0],
-                        [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
-                        [0, 0, 0, 0, 0, 1, 0, 1, 1, 1],
-                        [0, 0, 0, 0, 0, 1, 1, 0, 1, 1],
-                        [0, 0, 0, 0, 0, 1, 1, 1, 0, 1],
-                        [0, 0, 0, 0, 0, 1, 1, 1, 1, 0],
-                    ],
-                    dtype=torch.float,
-                ),
-                # Opponent-Connections
-                torch.tensor(
-                    [
-                        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
-                        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
-                        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
-                        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
-                        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
-                        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                    ],
-                    dtype=torch.float,
-                ),
-            ],
-        )
+        self.config = config
+        adjacency_matrices = [self.SELF_CONNECTIONS]
+        if config.teammate_connections:
+            adjacency_matrices.append(self.TEAMMATE_CONNECTIONS)
+        if config.opponent_connections:
+            adjacency_matrices.append(self.OPPONENT_CONNECTIONS)
+        self.gcnn = Gcnn(config.gcnn_config, adjacency_matrices=adjacency_matrices)
 
     def inputs(self) -> Tuple[str]:
         """Inputs to the team convolution module are the hero embeddings."""

@@ -19,6 +19,7 @@ import wandb
 from draft.data.filter import HighRankMatchFilter, ValidMatchFilter
 from draft.model.embedding import EmbeddingConfig
 from draft.model.match_prediction import MatchPredictionConfig
+from draft.model.modules.gcnn import GcnnConfig
 from draft.model.modules.mlp import MlpConfig
 from draft.model.model import Model, ModelConfig
 from draft.model.team_modules import TeamConvolutionConfig
@@ -123,9 +124,13 @@ def train(logger: WandbLogger):
             embedding_size=read_config(Arguments.MODEL_EMBEDDING_SIZE),
         ),
         team_convolution_config=TeamConvolutionConfig(
-            input_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
-            layers=read_config(Arguments.MODEL_TEAM_CONVOLUTION_LAYERS),
-            activation=True,
+            gcnn_config=GcnnConfig(
+                input_dimension=read_config(Arguments.MODEL_EMBEDDING_SIZE),
+                layers=read_config(Arguments.MODEL_TEAM_CONVOLUTION_LAYERS),
+                activation=True,
+            ),
+            teammate_connections=read_config(Arguments.MODEL_TEAM_CONVOLUTION_TEAMMATE_CONNECTIONS),
+            opponent_connections=read_config(Arguments.MODEL_TEAM_CONVOLUTION_OPPONENT_CONNECTIONS),
         ),
         match_prediction_config=MatchPredictionConfig(
             symmetric=read_config(Arguments.MODEL_SYMMETRIC),
