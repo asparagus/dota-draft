@@ -25,17 +25,24 @@ class MatchPredictionConfig:
 
 MatchPredictionCrossEntropyLoss = WrappedLoss(
     loss_fn=nn.functional.binary_cross_entropy,
-    input_name=OutputKeys.OUTPUT_WIN_PROBABILITIES,
+    input_name=OutputKeys.OUTPUT_WIN_PROBABILITY,
     target_name=LabelKeys.LABEL_RADIANT_WIN,
     name="MatchPredictionCrossEntropyLoss",
 )
 
 
 class MatchPredictionModule(JigsawModule):
+    """Class for a match prediction mlp."""
+
     def __init__(self, config: MatchPredictionConfig):
+        """Initializes the module based on the config.
+
+        Args:
+            config: The config used for this module
+        """
         super().__init__()
         self.key_output_team_embeddings = OutputKeys.OUTPUT_TEAM_EMBEDDINGS
-        self.key_output_win_probabilities = OutputKeys.OUTPUT_WIN_PROBABILITIES
+        self.key_output_win_probability = OutputKeys.OUTPUT_WIN_PROBABILITY
         self.mlp = Mlp(config.mlp_config)
         self.config = config
 
@@ -54,12 +61,22 @@ class MatchPredictionModule(JigsawModule):
             self.val_accuracy = torchmetrics.classification.BinaryAccuracy()
 
     def inputs(self) -> Tuple[str]:
+        """Inputs for the embedding module are the team embeddings."""
         return tuple([self.key_output_team_embeddings])
 
     def outputs(self) -> Tuple[str]:
-        return tuple([self.key_output_win_probabilities])
+        """The output of this module is the win probability."""
+        return tuple([self.key_output_win_probability])
 
     def forward(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """Compute the forward pass to obtain the win probability.
+
+        Args:
+            x: (batch_size, 10, ...) vector with the team embeddings
+
+        Returns:
+            (batch_size) win probabilities
+        """
         team_embeddings = inputs[self.key_output_team_embeddings]
         radiant_team_embeddings, dire_team_embeddings = self.splitter(team_embeddings)
         draft = self.merger(radiant_team_embeddings, dire_team_embeddings)
@@ -77,7 +94,7 @@ class MatchPredictionModule(JigsawModule):
         probabilities = self.activation_fn(softmax_logits)[:, 0]
 
         output = {
-            self.key_output_win_probabilities: probabilities
+            self.key_output_win_probability: probabilities
         }
         return output
 

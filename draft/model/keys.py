@@ -5,7 +5,7 @@ class FeatureKeys:
 
 
 class OutputKeys:
-    OUTPUT_WIN_PROBABILITIES = "output_win_probabilities"
+    OUTPUT_WIN_PROBABILITY = "output_win_probability"
     OUTPUT_HERO_EMBEDDINGS = "output_hero_embeddings"
     OUTPUT_TEAM_EMBEDDINGS = "output_team_embeddings"
 
